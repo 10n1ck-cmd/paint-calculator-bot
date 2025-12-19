@@ -19,7 +19,7 @@ logging.basicConfig(
 # Конфигурация
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN', 'YOUR_BOT_TOKEN_HERE')
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID', '')  # ID администратора для заявок
-WEBHOOK_URL = os.environ.get('WEBHOOK_URL', 'https://your-app.onrender.com')
+WEBHOOK_URL = os.environ.get('WEBHOOK_URL', 'https://paint-calculator-bot.onrender.com')
 PORT = int(os.environ.get('PORT', 5000))
 
 # Типы поверхностей
@@ -403,3 +403,4 @@ if __name__ == '__main__':
         bot_thread = Thread(target=run_bot)
         bot_thread.start()
         app.run(host='0.0.0.0', port=PORT, debug=False)
+
