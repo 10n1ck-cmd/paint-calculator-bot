@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор порошковых красок</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; color: #333; }
+        .calculator { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .form-section { margin-bottom: 25px; }
+        h2 { color: #333; margin-bottom: 15px; border-bottom: 2px solid #4a90e2; padding-bottom: 10px; }
+        .input-group { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
+        .input-field { flex: 1; min-width: 200px; }
+        label { display: block; margin-bottom: 8px; color: #555; font-weight: bold; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; }
+        input:focus, select:focus { border-color: #4a90e2; outline: none; }
+        .paint-section { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        @media (max-width: 768px) { .paint-section { grid-template-columns: 1fr; } }
+        .paint-card { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px solid #e9ecef; }
+        button { padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 10px; }
+        .calculate-btn { background: #4a90e2; color: white; }
+        .calculate-btn:hover { background: #357ae8; }
+        .reset-btn { background: #6c757d; color: white; }
+        .reset-btn:hover { background: #5a6268; }
+        .results { display: none; background: white; border-radius: 10px; padding: 30px; margin-top: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .result-card { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px solid #e9ecef; }
+        .result-value { font-size: 24px; font-weight: bold; color: #4a90e2; margin: 10px 0; }
+        .offer-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
+        .offer-content { background: white; border-radius: 10px; padding: 30px; width: 90%; max-width: 500px; margin: 50px auto; }
+        .surface-types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; }
+        .surface-btn { padding: 12px; border: 2px solid #ddd; border-radius: 5px; text-align: center; cursor: pointer; }
+        .surface-btn.selected { border-color: #4a90e2; background: #4a90e2; color: white; }
+        .close-btn { float: right; background: none; border: none; font-size: 24px; cursor: pointer; }
+        .success-message { background: #d4edda; color: #155724; padding: 20px; border-radius: 5px; margin-top: 20px; display: none; }
+        .telegram-info { background: #0088cc; color: white; padding: 20px; border-radius: 10px; margin-top: 30px; text-align: center; }
+        .telegram-link { color: white; text-decoration: none; font-weight: bold; }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #4a90e2; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Калькулятор порошковых красок</h1>
+            <p>Сравните краски и получите выгодное предложение</p>
+        </div>
+        
+        <div class="calculator" id="calculator">
+            <div class="form-section">
+                <h2>📐 Параметры изделия</h2>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="productArea">Площадь изделия (м²)</label>
+                        <input type="number" id="productArea" value="1.0" step="0.01" min="0.01">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h2>🎨 Краска 1</h2>
+                <div class="paint-card">
+                    <div class="input-group">
+                        <div class="input-field">
+                            <label for="paint1Name">Название</label>
+                            <input type="text" id="paint1Name" value="Полиэстер">
+                        </div>
+                        <div class="input-field">
+                            <label for="paint1Density">Плотность (г/см³)</label>
+                            <input type="number" id="paint1Density" value="1.5" step="0.01">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-field">
+                            <label for="paint1Thickness">Толщина (мкм)</label>
+                            <input type="number" id="paint1Thickness" value="60">
+                        </div>
+                        <div class="input-field">
+                            <label for="paint1Price">Цена (руб/кг)</label>
+                            <input type="number" id="paint1Price" value="450">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h2>🎨 Краска 2</h2>
+                <div class="paint-card">
+                    <div class="input-group">
+                        <div class="input-field">
+                            <label for="paint2Name">Название</label>
+                            <input type="text" id="paint2Name" value="Эпоксидная">
+                        </div>
+                        <div class="input-field">
+                            <label for="paint2Density">Плотность (г/см³)</label>
+                            <input type="number" id="paint2Density" value="1.8" step="0.01">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-field">
+                            <label for="paint2Thickness">Толщина (мкм)</label>
+                            <input type="number" id="paint2Thickness" value="80">
+                        </div>
+                        <div class="input-field">
+                            <label for="paint2Price">Цена (руб/кг)</label>
+                            <input type="number" id="paint2Price" value="520">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button class="calculate-btn" onclick="calculate()">📊 Рассчитать</button>
+                <button class="reset-btn" onclick="resetForm()">🔄 Сбросить</button>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Расчет...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <h2>📊 Результаты</h2>
+            <div class="comparison-grid" id="resultsGrid"></div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="calculate-btn" onclick="openOfferModal()">💼 Получить выгодное предложение</button>
+                <button class="reset-btn" onclick="showCalculator()">🔄 Новый расчет</button>
+            </div>
+        </div>
+        
+        <div class="offer-modal" id="offerModal">
+            <div class="offer-content">
+                <button class="close-btn" onclick="closeOfferModal()">×</button>
+                <h2>💼 Заявка на предложение</h2>
+                
+                <form id="offerForm">
+                    <div class="input-field">
+                        <label>Тип поверхности</label>
+                        <div class="surface-types" id="surfaceTypes">
+                            <div class="surface-btn" onclick="selectSurface(this,'gloss')">Глянцевая</div>
+                            <div class="surface-btn" onclick="selectSurface(this,'matte')">Матовая</div>
+                            <div class="surface-btn" onclick="selectSurface(this,'shagreen')">Шагрень</div>
+                            <div class="surface-btn" onclick="selectSurface(this,'moire')">Муар</div>
+                            <div class="surface-btn" onclick="selectSurface(this,'antique')">Антик</div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="offerColor">Цвет краски</label>
+                        <input type="text" id="offerColor" placeholder="RAL 9010" required>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="offerQuantity">Количество изделий</label>
+                        <input type="number" id="offerQuantity" value="1" min="1" required>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="offerName">Ваше имя</label>
+                        <input type="text" id="offerName" required>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="offerPhone">Телефон</label>
+                        <input type="tel" id="offerPhone" placeholder="+7 (999) 999-99-99" required>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="offerEmail">Email</label>
+                        <input type="email" id="offerEmail" required>
+                    </div>
+                    
+                    <button type="submit" class="calculate-btn" style="width: 100%; margin: 20px 0;">🚀 Отправить заявку</button>
+                </form>
+                
+                <div class="success-message" id="successMessage">
+                    <h3>✅ Успешно!</h3>
+                    <p>Заявка отправлена. Мы свяжемся с вами в течение часа.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="telegram-info">
+            <h3>💬 Есть Telegram?</h3>
+            <p>Используйте нашего бота для быстрых расчетов!</p>
+            <a href="#" class="telegram-link" id="telegramLink">Открыть бота</a>
+        </div>
+    </div>
+    
+    <script>
+        let selectedSurface = '';
+        let currentResult = null;
+        
+        function selectSurface(element, type) {
+            selectedSurface = type;
+            document.querySelectorAll('.surface-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+        
+        function calculate() {
+            document.getElementById('loading').style.display = 'block';
+            
+            const data = {
+                product_area: parseFloat(document.getElementById('productArea').value),
+                paint1: {
+                    name: document.getElementById('paint1Name').value,
+                    density: parseFloat(document.getElementById('paint1Density').value),
+                    thickness: parseFloat(document.getElementById('paint1Thickness').value),
+                    price: parseFloat(document.getElementById('paint1Price').value)
+                },
+                paint2: {
+                    name: document.getElementById('paint2Name').value,
+                    density: parseFloat(document.getElementById('paint2Density').value),
+                    thickness: parseFloat(document.getElementById('paint2Thickness').value),
+                    price: parseFloat(document.getElementById('paint2Price').value)
+                }
+            };
+            
+            fetch('/api/calculate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(result => {
+                document.getElementById('loading').style.display = 'none';
+                if (result.success) {
+                    currentResult = result.result;
+                    displayResults(result.result);
+                    document.getElementById('calculator').style.display = 'none';
+                    document.getElementById('results').style.display = 'block';
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            })
+            .catch(() => {
+                document.getElementById('loading').style.display = 'none';
+                alert('Ошибка соединения');
+            });
+        }
+        
+        function displayResults(result) {
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = `
+                <div class="result-card">
+                    <h3>${result.paint1.name}</h3>
+                    <p>Цена: ${result.paint1.price_per_kg} руб/кг</p>
+                    <p>Расход: ${result.paint1.practical_consumption} кг</p>
+                    <div class="result-value">${result.paint1.product_cost} руб</div>
+                </div>
+                <div class="result-card">
+                    <h3>${result.paint2.name}</h3>
+                    <p>Цена: ${result.paint2.price_per_kg} руб/кг</p>
+                    <p>Расход: ${result.paint2.practical_consumption} кг</p>
+                    <div class="result-value">${result.paint2.product_cost} руб</div>
+                </div>
+                <div class="result-card">
+                    <h3>📈 Сравнение</h3>
+                    <p>Разница: ${Math.abs(result.comparison.cost_difference)} руб</p>
+                    <p>Процент: ${Math.abs(result.comparison.cost_difference_percent)}%</p>
+                    <div class="result-value">Выгоднее: ${result.comparison.cheaper_paint_name}</div>
+                </div>
+            `;
+        }
+        
+        function openOfferModal() {
+            document.getElementById('offerModal').style.display = 'block';
+        }
+        
+        function closeOfferModal() {
+            document.getElementById('offerModal').style.display = 'none';
+            document.getElementById('offerForm').reset();
+            document.getElementById('successMessage').style.display = 'none';
+            selectedSurface = '';
+            document.querySelectorAll('.surface-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+        
+        document.getElementById('offerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!selectedSurface) {
+                alert('Выберите тип поверхности');
+                return;
+            }
+            
+            const data = {
+                surface_type: selectedSurface,
+                color: document.getElementById('offerColor').value,
+                quantity: document.getElementById('offerQuantity').value,
+                name: document.getElementById('offerName').value,
+                phone: document.getElementById('offerPhone').value,
+                email: document.getElementById('offerEmail').value
+            };
+            
+            fetch('/api/offer', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    document.getElementById('offerForm').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                    setTimeout(closeOfferModal, 3000);
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            });
+        });
+        
+        function resetForm() {
+            document.getElementById('productArea').value = '1.0';
+            document.getElementById('paint1Name').value = 'Полиэстер';
+            document.getElementById('paint1Density').value = '1.5';
+            document.getElementById('paint1Thickness').value = '60';
+            document.getElementById('paint1Price').value = '450';
+            document.getElementById('paint2Name').value = 'Эпоксидная';
+            document.getElementById('paint2Density').value = '1.8';
+            document.getElementById('paint2Thickness').value = '80';
+            document.getElementById('paint2Price').value = '520';
+        }
+        
+        function showCalculator() {
+            document.getElementById('calculator').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        }
+        
+        document.getElementById('telegramLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            alert('После запуска бота, ссылка появится здесь');
+        });
+    </script>
+</body>
+</html>
