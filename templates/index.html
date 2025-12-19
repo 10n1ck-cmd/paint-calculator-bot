@@ -13,47 +13,37 @@ background:linear-gradient(135deg,#667eea,#764ba2);
 min-height:100vh;padding:20px
 }
 .container{max-width:1200px;margin:auto}
-
-.header{text-align:center;color:#fff;margin-bottom:30px}
-.header h1{font-size:2.3em;margin-bottom:5px}
-.header p{opacity:.9}
+.header{text-align:center;color:#fff;margin-bottom:25px}
 
 .block{
 background:#fff;border-radius:15px;
-padding:25px;margin-bottom:30px;
+padding:25px;margin-bottom:25px;
 box-shadow:0 10px 30px rgba(0,0,0,.2)
 }
 
 .toggle{
-display:flex;justify-content:center;gap:10px;margin-bottom:20px
+display:flex;justify-content:center;gap:10px;margin-bottom:15px
 }
 .toggle button{
 padding:8px 16px;border-radius:20px;
 border:2px solid #667eea;
 background:#fff;color:#667eea;
-cursor:pointer;font-size:.9em
+cursor:pointer
 }
-.toggle button.active{
-background:#667eea;color:#fff
-}
+.toggle button.active{background:#667eea;color:#fff}
 
 .calc-types{
 display:grid;grid-template-columns:1fr 1fr;
-gap:20px;margin-bottom:20px
+gap:15px;margin-bottom:20px
 }
 .calc-type-btn{
 border:3px solid #e0e0e0;
-border-radius:12px;
-padding:25px;
-cursor:pointer;
-text-align:center;
-font-size:1.1em;
-transition:.2s
+border-radius:12px;padding:18px;
+cursor:pointer;text-align:center;font-size:1.05em
 }
 .calc-type-btn.active{
 background:#667eea;color:#fff;border-color:#667eea
 }
-.calc-type-btn:active{transform:scale(.97)}
 
 .input-group{
 display:flex;gap:15px;flex-wrap:wrap;margin-bottom:15px
@@ -61,7 +51,7 @@ display:flex;gap:15px;flex-wrap:wrap;margin-bottom:15px
 .input-field{flex:1;min-width:200px}
 label{font-weight:600;display:block;margin-bottom:5px}
 input{
-width:100%;padding:12px;
+width:100%;padding:10px;
 border:2px solid #ddd;border-radius:6px
 }
 
@@ -71,7 +61,6 @@ border:none;border-radius:8px;
 padding:14px 28px;
 font-size:1em;cursor:pointer
 }
-button.primary:active{transform:scale(.97)}
 
 .results-grid{
 display:grid;
@@ -81,34 +70,14 @@ gap:20px
 .card{
 background:#f8f9fa;
 border-radius:12px;
-padding:20px;
-border:2px solid #e9ecef
+padding:18px;border:2px solid #e9ecef
 }
-.value{
-font-size:22px;font-weight:700;margin-top:5px
-}
+.value{font-size:22px;font-weight:700}
 .good{color:#2e7d32}
 .bad{color:#c62828}
-
 .tech{
-background:#eef2ff;
-border-left:4px solid #667eea;
-padding:12px;margin-top:12px;
-font-size:.9em
-}
-
-.soft-ad{
-margin-top:40px;
-padding:15px;
-background:#f4f6fb;
-border-top:1px solid #e0e6f0;
-text-align:center;
-font-size:.9em;color:#555
-}
-.soft-ad a{
-color:#667eea;
-font-weight:600;
-text-decoration:none
+background:#eef2ff;border-left:4px solid #667eea;
+padding:10px;margin-top:10px;font-size:.9em
 }
 
 @media(max-width:768px){
@@ -127,47 +96,76 @@ text-decoration:none
 </div>
 
 <div class="block">
+
 <div class="toggle">
-<button id="userBtn" class="active"
-onclick="setTechMode(false)">👤 Обычный режим</button>
-<button id="techBtn"
-onclick="setTechMode(true)">🧪 Режим технолога</button>
+<button id="userBtn" class="active" onclick="setTechMode(false)">👤 Обычный режим</button>
+<button id="techBtn" onclick="setTechMode(true)">🧪 Режим технолога</button>
 </div>
 
 <div class="calc-types">
-<div class="calc-type-btn active"
-onclick="selectCalc(event,'theoretical')">🎓 Теоретический расчёт</div>
-<div class="calc-type-btn"
-onclick="selectCalc(event,'practical')">🔧 Практический расчёт</div>
+<div class="calc-type-btn active" onclick="selectCalc(event,'theoretical')">🎓 Теоретический</div>
+<div class="calc-type-btn" onclick="selectCalc(event,'practical')">🔧 Практический</div>
 </div>
 
-<div style="text-align:center">
+<div class="input-group">
+<div class="input-field">
+<label>Площадь изделия (м²)</label>
+<input type="number" id="product_area" step="0.01">
+</div>
+<div class="input-field" id="lossBlock">
+<label>Потери (%)</label>
+<input type="number" id="loss_factor" value="15">
+</div>
+</div>
+
+<h3>🎨 Краска 1</h3>
+<div class="input-group" id="paint1_theory">
+<input class="input-field" id="p1_name" placeholder="Название">
+<input class="input-field" id="p1_density" placeholder="Плотность г/см³">
+<input class="input-field" id="p1_thickness" placeholder="Толщина мкм">
+<input class="input-field" id="p1_price" placeholder="Цена за кг">
+</div>
+
+<div class="input-group" id="paint1_practice" style="display:none">
+<input class="input-field" id="p1p_name" placeholder="Название">
+<input class="input-field" id="p1_real" placeholder="Расход кг">
+<input class="input-field" id="p1p_price" placeholder="Цена за кг">
+</div>
+
+<h3>🎨 Краска 2</h3>
+<div class="input-group" id="paint2_theory">
+<input class="input-field" id="p2_name" placeholder="Название">
+<input class="input-field" id="p2_density" placeholder="Плотность г/см³">
+<input class="input-field" id="p2_thickness" placeholder="Толщина мкм">
+<input class="input-field" id="p2_price" placeholder="Цена за кг">
+</div>
+
+<div class="input-group" id="paint2_practice" style="display:none">
+<input class="input-field" id="p2p_name" placeholder="Название">
+<input class="input-field" id="p2_real" placeholder="Расход кг">
+<input class="input-field" id="p2p_price" placeholder="Цена за кг">
+</div>
+
+<div style="text-align:center;margin-top:20px">
 <button class="primary" onclick="calculate()">Рассчитать</button>
 </div>
 </div>
 
 <div class="block" id="results" style="display:none">
-<h2 style="margin-bottom:20px">📊 Результаты</h2>
+<h2>📊 Результаты</h2>
 <div class="results-grid" id="resultsGrid"></div>
 </div>
-
-<footer class="soft-ad">
-🎨 Нужна помощь с подбором порошковой краски?
-<a href="/contacts">Связаться с технологом</a>
-</footer>
 
 </div>
 
 <script>
-document.addEventListener('touchstart',()=>{},true);
-
-let techMode=false;
 let calcType='theoretical';
+let techMode=false;
 
-function setTechMode(value){
-techMode=value;
-userBtn.classList.toggle('active',!value);
-techBtn.classList.toggle('active',value);
+function setTechMode(v){
+techMode=v;
+userBtn.classList.toggle('active',!v);
+techBtn.classList.toggle('active',v);
 }
 
 function selectCalc(e,type){
@@ -175,57 +173,67 @@ calcType=type;
 document.querySelectorAll('.calc-type-btn')
 .forEach(b=>b.classList.remove('active'));
 e.currentTarget.classList.add('active');
+
+paint1_theory.style.display=type==='theoretical'?'flex':'none';
+paint2_theory.style.display=type==='theoretical'?'flex':'none';
+paint1_practice.style.display=type==='practical'?'flex':'none';
+paint2_practice.style.display=type==='practical'?'flex':'none';
+lossBlock.style.display=type==='theoretical'?'block':'none';
 }
 
-function calculate(){
+async function calculate(){
+const area=parseFloat(product_area.value);
+if(!area||area<=0){alert('Введите площадь');return;}
 
-/* демонстрационные данные (заменишь на API) */
-const p1={name:'Полиэстер',cons:0.85,price:450};
-const p2={name:'Эпоксидная',cons:1.2,price:520};
+let payload={calc_type:calcType,product_area:area};
 
-const cost1=p1.cons*p1.price;
-const cost2=p2.cons*p2.price;
+if(calcType==='theoretical'){
+payload.loss_factor=parseFloat(loss_factor.value)/100;
+payload.paint1={
+name:p1_name.value,density:+p1_density.value,
+thickness:+p1_thickness.value,price:+p1_price.value
+};
+payload.paint2={
+name:p2_name.value,density:+p2_density.value,
+thickness:+p2_thickness.value,price:+p2_price.value
+};
+}else{
+payload.paint1={
+name:p1p_name.value,real_consumption:+p1_real.value,price:+p1p_price.value
+};
+payload.paint2={
+name:p2p_name.value,real_consumption:+p2_real.value,price:+p2p_price.value
+};
+}
 
-const diff=cost2-cost1;
-const diffPct=(diff/cost2*100).toFixed(1);
-const better=cost1<cost2?p1:p2;
+const res=await fetch('/api/calculate',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify(payload)
+});
+const json=await res.json();
+if(!json.success){alert(json.error);return;}
+render(json.result);
+}
 
+function render(r){
+const d=r.comparison.difference;
 resultsGrid.innerHTML=`
 <div class="card">
-<h3>${p1.name}</h3>
-<div class="value">${cost1.toFixed(0)} ₽</div>
-${techMode?`
-<div class="tech">
-Расход: ${(p1.cons*1000).toFixed(0)} г/м²<br>
-Укрывистость: ${(1/p1.cons).toFixed(2)} м²/кг
-</div>`:''}
+<h3>${r.paint1.name}</h3>
+<div class="value">${r.paint1.product_cost} ₽</div>
+${techMode?`<div class="tech">Расход: ${r.paint1.practical_consumption||r.paint1.real_consumption} кг</div>`:''}
 </div>
-
 <div class="card">
-<h3>${p2.name}</h3>
-<div class="value">${cost2.toFixed(0)} ₽</div>
-${techMode?`
-<div class="tech">
-Расход: ${(p2.cons*1000).toFixed(0)} г/м²<br>
-Укрывистость: ${(1/p2.cons).toFixed(2)} м²/кг
-</div>`:''}
+<h3>${r.paint2.name}</h3>
+<div class="value">${r.paint2.product_cost} ₽</div>
+${techMode?`<div class="tech">Расход: ${r.paint2.practical_consumption||r.paint2.real_consumption} кг</div>`:''}
 </div>
-
 <div class="card">
 <h3>💰 Экономия</h3>
-<div class="value ${diff>0?'good':'bad'}">
-${Math.abs(diff).toFixed(0)} ₽ (${Math.abs(diffPct)}%)
-</div>
-<p style="margin-top:10px"><strong>Рекомендуется:</strong></p>
-<div class="value good">${better.name}</div>
-${techMode?`
-<div class="tech">
-Формула:<br>
-Стоимость = Расход × Цена
-</div>`:''}
-</div>
-`;
-
+<div class="value ${d>0?'good':'bad'}">${Math.abs(d)} ₽</div>
+<div class="value good">${r.comparison.cheaper_name}</div>
+</div>`;
 results.style.display='block';
 }
 </script>
