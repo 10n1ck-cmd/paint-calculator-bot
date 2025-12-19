@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Калькулятор порошковых красок</title>
+    <title>Калькулятор расхода порошковых красок</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
@@ -13,6 +13,49 @@
         .header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .header p { font-size: 1.1em; opacity: 0.9; }
         
+        /* Баннер рекламы на главном месте */
+        .main-ad-banner {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+            color: #333;
+            border: 3px dashed #ff6b6b;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .main-ad-banner h2 {
+            color: #d63031;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        
+        .main-ad-banner p {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: #d63031;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        
+        .cta-button:hover {
+            background: #ff6b6b;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        /* Выбор типа расчета */
         .calc-type-selector { 
             background: white; 
             border-radius: 15px; 
@@ -64,51 +107,9 @@
             margin-bottom: 15px;
         }
         
-        /* Баннер рекламы */
-        .ad-banner {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 30px 0;
-            text-align: center;
-            color: #333;
-            border: 3px dashed #ff6b6b;
-        }
-        
-        .ad-banner h3 {
-            color: #d63031;
-            margin-bottom: 10px;
-        }
-        
+        /* Убраны старые баннеры */
         .telegram-promo {
-            background: linear-gradient(135deg, #0088cc 0%, #005580 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            margin: 30px 0;
-            text-align: center;
-        }
-        
-        .telegram-promo h3 {
-            margin-bottom: 15px;
-            font-size: 1.4em;
-        }
-        
-        .telegram-link {
-            display: inline-block;
-            background: white;
-            color: #0088cc;
-            padding: 12px 25px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 10px;
-            transition: all 0.3s;
-        }
-        
-        .telegram-link:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: none;
         }
         
         /* Калькуляторы */
@@ -166,15 +167,18 @@
     <div class="container">
         <!-- Шапка -->
         <div class="header">
-            <h1>🎨 Калькулятор порошковых красок</h1>
+            <h1>🎨 Калькулятор расхода порошковых красок</h1>
             <p>Сравниваем краски, считаем экономию, находим лучший вариант</p>
         </div>
         
-        <!-- Баннер рекламы -->
-        <div class="ad-banner">
-            <h3>🚀 Тут может быть ваша реклама!</h3>
+        <!-- Баннер рекламы на главном месте -->
+        <div class="main-ad-banner">
+            <h2>🚀 Тут может быть ваша реклама!</h2>
             <p>Хотите продвигать свои краски или оборудование?</p>
-            <p>Свяжитесь с нами: <strong>sales@example.com</strong></p>
+            <p>Свяжитесь с нами прямо сейчас и получите специальные условия!</p>
+            <p><strong>Email:</strong> ppk63@mail.ru</p>
+            <p><strong>Телефон:</strong> +7 (967) 486-11-63</p>
+            <a href="mailto:ppk63@mail.ru" class="cta-button">📧 Написать нам</a>
         </div>
         
         <!-- Выбор типа расчета -->
@@ -346,13 +350,6 @@
             </div>
         </div>
         
-        <!-- Промо Telegram -->
-        <div class="telegram-promo">
-            <h3>💬 Есть Telegram? Используйте нашего бота для быстрых расчетов!</h3>
-            <p>Расчеты прямо в чате, история запросов, мгновенные уведомления</p>
-            <a href="https://t.me/@powdercalcbot" class="telegram-link" id="telegramLink" target="_blank">🤖 Открыть бота в Telegram</a>
-        </div>
-        
         <!-- Загрузка -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
@@ -364,7 +361,7 @@
             <h2>📊 Результаты сравнения</h2>
             <div class="comparison-grid" id="resultsGrid"></div>
             <div style="text-align: center; margin-top: 30px;">
-                <button class="calculate-btn" onclick="openOfferModal()">💼 Заказать краску</button>
+                <button class="calculate-btn" onclick="openOfferModal()">💼 Получить более выгодное предложение</button>
                 <button class="reset-btn" onclick="showTypeSelector()">🔄 Новый расчет</button>
             </div>
         </div>
@@ -451,17 +448,6 @@
                         <strong>📞 Наш менеджер свяжется с вами в течение часа</strong><br>
                         для уточнения деталей и согласования доставки.
                     </p>
-                    
-                    <div class="telegram-promo" style="margin: 20px 0; padding: 15px; background: #f0f7ff; border-radius: 10px;">
-                        <p style="margin: 0 0 10px 0; color: #333;">
-                            <strong>💬 Есть Telegram?</strong><br>
-                            Добавляйте нашего бота для расчетов нужного количества краски!
-                        </p>
-                        <a href="https://t.me/ваш_бот_username" class="telegram-link" id="telegramLinkSuccess" target="_blank" 
-                           style="display: inline-block; padding: 10px 20px; font-size: 0.9em; margin-top: 5px;">
-                            🤖 Открыть бота в Telegram
-                        </a>
-                    </div>
                     
                     <button class="calculate-btn" onclick="closeOfferModal()" 
                             style="margin-top: 20px; width: 100%; padding: 12px;">
@@ -739,23 +725,4 @@
                 document.getElementById('paint1Density').value = '1.5';
                 document.getElementById('paint1Thickness').value = '60';
                 document.getElementById('paint1Price').value = '450';
-                document.getElementById('paint2Name').value = 'Эпоксидная';
-                document.getElementById('paint2Density').value = '1.8';
-                document.getElementById('paint2Thickness').value = '80';
-                document.getElementById('paint2Price').value = '520';
-            } else {
-                document.getElementById('productArea2').value = '1.0';
-                document.getElementById('paint1Name2').value = 'Полиэстер';
-                document.getElementById('paint1Consumption').value = '0.85';
-                document.getElementById('paint1Price2').value = '450';
-                document.getElementById('paint2Name2').value = 'Эпоксидная';
-                document.getElementById('paint2Consumption').value = '1.2';
-                document.getElementById('paint2Price2').value = '520';
-            }
-        }
-        
-        // Показываем выбор типа расчета при загрузке
-        showTypeSelector();
-    </script>
-</body>
-</html>
+                document.getElementById('paint2Name').value =
