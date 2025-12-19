@@ -1,728 +1,126 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Калькулятор расхода порошковых красок</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        
-        .header { text-align: center; margin-bottom: 40px; color: white; }
-        .header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-        .header p { font-size: 1.1em; opacity: 0.9; }
-        
-        /* Баннер рекламы на главном месте */
-        .main-ad-banner {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 30px 0;
-            text-align: center;
-            color: #333;
-            border: 3px dashed #ff6b6b;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .main-ad-banner h2 {
-            color: #d63031;
-            margin-bottom: 15px;
-            font-size: 1.8em;
-        }
-        
-        .main-ad-banner p {
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-        
-        .cta-button {
-            display: inline-block;
-            background: #d63031;
-            color: white;
-            padding: 15px 30px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 15px;
-            font-size: 1.1em;
-            transition: all 0.3s;
-        }
-        
-        .cta-button:hover {
-            background: #ff6b6b;
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        
-        /* Выбор типа расчета */
-        .calc-type-selector { 
-            background: white; 
-            border-radius: 15px; 
-            padding: 30px; 
-            margin-bottom: 30px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .calc-types {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        @media (max-width: 768px) {
-            .calc-types { grid-template-columns: 1fr; }
-        }
-        
-        .calc-type-btn {
-            background: #f8f9fa;
-            border: 3px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 25px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .calc-type-btn:hover {
-            border-color: #667eea;
-            background: #f0f2ff;
-            transform: translateY(-5px);
-        }
-        
-        .calc-type-btn.active {
-            border-color: #667eea;
-            background: #667eea;
-            color: white;
-        }
-        
-        .calc-type-btn h3 {
-            margin-bottom: 10px;
-            font-size: 1.3em;
-        }
-        
-        .calc-type-btn .icon {
-            font-size: 2.5em;
-            margin-bottom: 15px;
-        }
-        
-        /* Убраны старые баннеры */
-        .telegram-promo {
-            display: none;
-        }
-        
-        /* Калькуляторы */
-        .calculator { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; display: none; }
-        .form-section { margin-bottom: 25px; }
-        h2 { color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
-        .input-group { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
-        .input-field { flex: 1; min-width: 200px; }
-        label { display: block; margin-bottom: 8px; color: #555; font-weight: bold; }
-        input, select, textarea { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; }
-        input:focus, select:focus, textarea:focus { border-color: #667eea; outline: none; }
-        .paint-section { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        .paint-card { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 2px solid #e9ecef; }
-        button { padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 10px; }
-        .calculate-btn { background: #667eea; color: white; }
-        .calculate-btn:hover { background: #5a67d8; }
-        .reset-btn { background: #6c757d; color: white; }
-        .reset-btn:hover { background: #5a6268; }
-        
-        /* Результаты */
-        .results { display: none; background: white; border-radius: 15px; padding: 30px; margin-top: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .result-card { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 2px solid #e9ecef; }
-        .result-value { font-size: 24px; font-weight: bold; color: #667eea; margin: 10px 0; }
-        
-        /* Загрузка */
-        .loading { text-align: center; padding: 20px; display: none; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Модальное окно заказа */
-        .offer-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
-        .offer-content { background: white; border-radius: 15px; padding: 30px; width: 90%; max-width: 500px; margin: 50px auto; }
-        .surface-types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; }
-        .surface-btn { padding: 12px; border: 2px solid #ddd; border-radius: 5px; text-align: center; cursor: pointer; }
-        .surface-btn.selected { border-color: #667eea; background: #667eea; color: white; }
-        .close-btn { float: right; background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
-        .success-message { background: #d4edda; color: #155724; padding: 20px; border-radius: 5px; margin-top: 20px; display: none; }
-        
-        /* Подсказки */
-        .form-note {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: 5px;
-            display: block;
-        }
-        
-        .required-field label:after {
-            content: " *";
-            color: #e74c3c;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор порошковых красок</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+font-family:Segoe UI,Tahoma,sans-serif;
+background:linear-gradient(135deg,#667eea,#764ba2);
+min-height:100vh;padding:20px
+}
+.container{max-width:1200px;margin:auto}
+.header{text-align:center;color:#fff;margin-bottom:30px}
+.header h1{font-size:2.4em}
+.header p{opacity:.9}
+
+.calc-type-selector,.calculator,.results{
+background:#fff;border-radius:15px;
+padding:30px;margin-bottom:30px;
+box-shadow:0 10px 30px rgba(0,0,0,.2)
+}
+
+.calc-types{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.calc-type-btn{
+border:3px solid #e0e0e0;
+border-radius:10px;padding:25px;
+cursor:pointer;text-align:center;
+transition:.3s
+}
+.calc-type-btn.active{
+background:#667eea;color:#fff;border-color:#667eea
+}
+.calc-type-btn:hover{transform:translateY(-4px)}
+
+.input-group{display:flex;gap:20px;flex-wrap:wrap}
+.input-field{flex:1;min-width:200px;margin-bottom:15px}
+label{font-weight:600;margin-bottom:5px;display:block}
+input,textarea{
+width:100%;padding:12px;
+border:2px solid #ddd;border-radius:5px
+}
+button{
+padding:15px 30px;border:none;border-radius:5px;
+font-size:16px;cursor:pointer;margin:10px
+}
+.calculate-btn{background:#667eea;color:#fff}
+.reset-btn{background:#6c757d;color:#fff}
+
+.result-card{
+background:#f8f9fa;border-radius:10px;
+padding:20px;border:2px solid #e9ecef
+}
+.comparison-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+gap:20px
+}
+.result-value{
+font-size:22px;font-weight:700;color:#667eea
+}
+
+.loading{text-align:center;display:none}
+.spinner{
+width:40px;height:40px;border-radius:50%;
+border:4px solid #eee;border-top:4px solid #667eea;
+animation:spin 1s linear infinite;margin:auto
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* мягкий рекламный баннер */
+.soft-ad{
+margin-top:40px;
+padding:15px;
+background:#f4f6fb;
+border-top:1px solid #e0e6f0;
+text-align:center;
+font-size:.9em;
+color:#555
+}
+.soft-ad a{
+margin-left:10px;
+color:#667eea;
+font-weight:600;
+text-decoration:none
+}
+.soft-ad a:hover{text-decoration:underline}
+</style>
 </head>
+
 <body>
-    <div class="container">
-        <!-- Шапка -->
-        <div class="header">
-            <h1>🎨 Калькулятор расхода порошковых красок</h1>
-            <p>Сравниваем краски, считаем экономию, находим лучший вариант</p>
-        </div>
-        
-        <!-- Баннер рекламы на главном месте -->
-        <div class="main-ad-banner">
-            <h2>🚀 Тут может быть ваша реклама!</h2>
-            <p>Хотите продвигать свои краски или оборудование?</p>
-            <p>Свяжитесь с нами прямо сейчас и получите специальные условия!</p>
-            <p><strong>Email:</strong> ppk63@mail.ru</p>
-            <p><strong>Телефон:</strong> +7 (967) 486-11-63</p>
-            <a href="mailto:ppk63@mail.ru" class="cta-button">📧 Написать нам</a>
-        </div>
-        
-        <!-- Выбор типа расчета -->
-        <div class="calc-type-selector" id="typeSelector">
-            <h2>📊 Выберите тип расчета</h2>
-            <div class="calc-types">
-                <div class="calc-type-btn active" onclick="selectCalcType('theoretical')">
-                    <div class="icon">🎓</div>
-                    <h3>Теоретический расчет</h3>
-                    <p>Знаете плотность и толщину покрытия</p>
-                    <p><small>Формат: Название; Плотность; Толщина; Цена</small></p>
-                </div>
-                <div class="calc-type-btn" onclick="selectCalcType('practical')">
-                    <div class="icon">🔧</div>
-                    <h3>Практический расчет</h3>
-                    <p>Знаете фактический расход на изделие</p>
-                    <p><small>Формат: Название; Расход; Цена</small></p>
-                </div>
-            </div>
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="calculate-btn" onclick="showCalculator()">▶️ Начать расчет</button>
-            </div>
-        </div>
-        
-        <!-- Теоретический калькулятор -->
-        <div class="calculator" id="theoreticalCalc">
-            <div class="form-section">
-                <h2>🎓 Теоретический расчет</h2>
-                <p>Знаем плотность, толщину и цену</p>
-            </div>
-            
-            <div class="form-section">
-                <h2>📐 Параметры изделия</h2>
-                <div class="input-group">
-                    <div class="input-field">
-                        <label for="productArea">Площадь изделия (м²)</label>
-                        <input type="number" id="productArea" value="1.0" step="0.01" min="0.01">
-                        <span class="form-note">Укажите площадь покрытия в квадратных метрах</span>
-                    </div>
-                    <div class="input-field">
-                        <label for="lossFactor">Коэффициент потерь (%)</label>
-                        <input type="number" id="lossFactor" value="15" step="0.1" min="0" max="50">
-                        <span class="form-note">Обычно 10-20% технологических потерь</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-section">
-                <h2>🎨 Краска 1</h2>
-                <div class="paint-card">
-                    <div class="input-group">
-                        <div class="input-field">
-                            <label for="paint1Name">Название</label>
-                            <input type="text" id="paint1Name" value="Полиэстер">
-                        </div>
-                        <div class="input-field">
-                            <label for="paint1Density">Плотность (г/см³)</label>
-                            <input type="number" id="paint1Density" value="1.5" step="0.01">
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <div class="input-field">
-                            <label for="paint1Thickness">Толщина (мкм)</label>
-                            <input type="number" id="paint1Thickness" value="60">
-                        </div>
-                        <div class="input-field">
-                            <label for="paint1Price">Цена (руб/кг)</label>
-                            <input type="number" id="paint1Price" value="450">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-section">
-                <h2>🎨 Краска 2</h2>
-                <div class="paint-card">
-                    <div class="input-group">
-                        <div class="input-field">
-                            <label for="paint2Name">Название</label>
-                            <input type="text" id="paint2Name" value="Эпоксидная">
-                        </div>
-                        <div class="input-field">
-                            <label for="paint2Density">Плотность (г/см³)</label>
-                            <input type="number" id="paint2Density" value="1.8" step="0.01">
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <div class="input-field">
-                            <label for="paint2Thickness">Толщина (мкм)</label>
-                            <input type="number" id="paint2Thickness" value="80">
-                        </div>
-                        <div class="input-field">
-                            <label for="paint2Price">Цена (руб/кг)</label>
-                            <input type="number" id="paint2Price" value="520">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="text-align: center;">
-                <button class="calculate-btn" onclick="calculate('theoretical')">📊 Рассчитать</button>
-                <button class="reset-btn" onclick="resetForm()">🔄 Сбросить</button>
-                <button class="reset-btn" onclick="showTypeSelector()">◀️ Назад</button>
-            </div>
-        </div>
-        
-        <!-- Практический калькулятор -->
-        <div class="calculator" id="practicalCalc">
-            <div class="form-section">
-                <h2>🔧 Практический расчет</h2>
-                <p>Знаем фактический расход и цену</p>
-            </div>
-            
-            <div class="form-section">
-                <h2>📐 Параметры изделия</h2>
-                <div class="input-group">
-                    <div class="input-field">
-                        <label for="productArea2">Площадь изделия (м²)</label>
-                        <input type="number" id="productArea2" value="1.0" step="0.01" min="0.01">
-                        <span class="form-note">Укажите площадь покрытия в квадратных метрах</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-section">
-                <h2>🎨 Краска 1</h2>
-                <div class="paint-card">
-                    <div class="input-group">
-                        <div class="input-field">
-                            <label for="paint1Name2">Название</label>
-                            <input type="text" id="paint1Name2" value="Полиэстер">
-                        </div>
-                        <div class="input-field">
-                            <label for="paint1Consumption">Расход на изделие (кг)</label>
-                            <input type="number" id="paint1Consumption" value="0.85" step="0.01">
-                        </div>
-                    </div>
-                    <div class="input-field">
-                        <label for="paint1Price2">Цена (руб/кг)</label>
-                        <input type="number" id="paint1Price2" value="450">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-section">
-                <h2>🎨 Краска 2</h2>
-                <div class="paint-card">
-                    <div class="input-group">
-                        <div class="input-field">
-                            <label for="paint2Name2">Название</label>
-                            <input type="text" id="paint2Name2" value="Эпоксидная">
-                        </div>
-                        <div class="input-field">
-                            <label for="paint2Consumption">Расход на изделие (кг)</label>
-                            <input type="number" id="paint2Consumption" value="1.2" step="0.01">
-                        </div>
-                    </div>
-                    <div class="input-field">
-                        <label for="paint2Price2">Цена (руб/кг)</label>
-                        <input type="number" id="paint2Price2" value="520">
-                    </div>
-                </div>
-            </div>
-            
-            <div style="text-align: center;">
-                <button class="calculate-btn" onclick="calculate('practical')">📊 Рассчитать</button>
-                <button class="reset-btn" onclick="resetForm()">🔄 Сбросить</button>
-                <button class="reset-btn" onclick="showTypeSelector()">◀️ Назад</button>
-            </div>
-        </div>
-        
-        <!-- Загрузка -->
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Выполняем расчеты...</p>
-        </div>
-        
-        <!-- Результаты -->
-        <div class="results" id="results">
-            <h2>📊 Результаты сравнения</h2>
-            <div class="comparison-grid" id="resultsGrid"></div>
-            <div style="text-align: center; margin-top: 30px;">
-                <button class="calculate-btn" onclick="openOfferModal()">💼 Получить более выгодное предложение</button>
-                <button class="reset-btn" onclick="showTypeSelector()">🔄 Новый расчет</button>
-            </div>
-        </div>
-        
-        <!-- Модальное окно заказа -->
-        <div class="offer-modal" id="offerModal">
-            <div class="offer-content">
-                <button class="close-btn" onclick="closeOfferModal()">×</button>
-                <h2>💼 Заказ краски</h2>
-                <p style="color: #666; margin-bottom: 20px;">Заполните форму для оформления заказа</p>
-                
-                <form id="offerForm">
-                    <!-- Тип поверхности -->
-                    <div class="input-field required-field">
-                        <label>Тип поверхности</label>
-                        <div class="surface-types" id="surfaceTypes">
-                            <div class="surface-btn" onclick="selectSurface(this,'gloss')">Глянцевая</div>
-                            <div class="surface-btn" onclick="selectSurface(this,'matte')">Матовая</div>
-                            <div class="surface-btn" onclick="selectSurface(this,'shagreen')">Шагрень</div>
-                            <div class="surface-btn" onclick="selectSurface(this,'moire')">Муар</div>
-                            <div class="surface-btn" onclick="selectSurface(this,'antique')">Антик</div>
-                        </div>
-                        <span class="form-note">Выберите тип поверхности покрытия</span>
-                    </div>
-                    
-                    <!-- Цвет -->
-                    <div class="input-field required-field">
-                        <label for="offerColor">Цвет краски</label>
-                        <input type="text" id="offerColor" placeholder="RAL 9010 или название цвета" required>
-                        <span class="form-note">Укажите цвет по каталогу RAL или название</span>
-                    </div>
-                    
-                    <!-- Количество краски в кг -->
-                    <div class="input-field required-field">
-                        <label for="offerQuantityKg">Количество краски</label>
-                        <input type="number" id="offerQuantityKg" value="10" step="0.1" min="0.1" required>
-                        <span class="form-note">Укажите необходимое количество краски в килограммах</span>
-                    </div>
-                    
-                    <!-- Контактная информация -->
-                    <h3 style="margin-top: 30px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">👤 Контактная информация</h3>
-                    
-                    <div class="input-group">
-                        <div class="input-field required-field">
-                            <label for="offerName">Ваше имя</label>
-                            <input type="text" id="offerName" required>
-                        </div>
-                        <div class="input-field required-field">
-                            <label for="offerPhone">Телефон</label>
-                            <input type="tel" id="offerPhone" placeholder="+7 (999) 999-99-99" required>
-                        </div>
-                    </div>
-                    
-                    <div class="input-field required-field">
-                        <label for="offerEmail">Email</label>
-                        <input type="email" id="offerEmail" required>
-                    </div>
-                    
-                    <div class="input-field">
-                        <label for="offerComment">Комментарий к заказу</label>
-                        <textarea id="offerComment" rows="3" placeholder="Дополнительные требования, адрес доставки, срочность и т.д."></textarea>
-                        <span class="form-note">Необязательное поле</span>
-                    </div>
-                    
-                    <!-- Кнопка отправки -->
-                    <button type="submit" class="calculate-btn" style="width: 100%; margin: 20px 0; padding: 17px; font-size: 1.1em;">
-                        🚀 Оформить заказ краски
-                    </button>
-                    
-                    <p style="text-align: center; color: #666; font-size: 0.9em;">
-                        * - обязательные для заполнения поля
-                    </p>
-                </form>
-                
-                <!-- Сообщение об успехе -->
-                <div class="success-message" id="successMessage">
-                    <h3>✅ Заказ оформлен!</h3>
-                    <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-                        <p style="margin: 0 0 10px 0; font-weight: bold;">📋 Детали заказа:</p>
-                        <p id="orderDetails" style="margin: 0;"></p>
-                    </div>
-                    
-                    <p style="margin: 15px 0;">
-                        <strong>📞 Наш менеджер свяжется с вами в течение часа</strong><br>
-                        для уточнения деталей и согласования доставки.
-                    </p>
-                    
-                    <button class="calculate-btn" onclick="closeOfferModal()" 
-                            style="margin-top: 20px; width: 100%; padding: 12px;">
-                        Закрыть
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        let currentCalcType = 'theoretical';
-        let selectedSurface = '';
-        let currentResult = null;
-        
-        function selectCalcType(type) {
-            currentCalcType = type;
-            document.querySelectorAll('.calc-type-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.closest('.calc-type-btn').classList.add('active');
-        }
-        
-        function showTypeSelector() {
-            document.getElementById('typeSelector').style.display = 'block';
-            document.getElementById('theoreticalCalc').style.display = 'none';
-            document.getElementById('practicalCalc').style.display = 'none';
-            document.getElementById('results').style.display = 'none';
-        }
-        
-        function showCalculator() {
-            document.getElementById('typeSelector').style.display = 'none';
-            if (currentCalcType === 'theoretical') {
-                document.getElementById('theoreticalCalc').style.display = 'block';
-            } else {
-                document.getElementById('practicalCalc').style.display = 'block';
-            }
-        }
-        
-        function calculate(type) {
-            document.getElementById('loading').style.display = 'block';
-            
-            let data = {};
-            
-            if (type === 'theoretical') {
-                data = {
-                    calc_type: 'theoretical',
-                    product_area: parseFloat(document.getElementById('productArea').value),
-                    paint1: {
-                        name: document.getElementById('paint1Name').value,
-                        density: parseFloat(document.getElementById('paint1Density').value),
-                        thickness: parseFloat(document.getElementById('paint1Thickness').value),
-                        price: parseFloat(document.getElementById('paint1Price').value)
-                    },
-                    paint2: {
-                        name: document.getElementById('paint2Name').value,
-                        density: parseFloat(document.getElementById('paint2Density').value),
-                        thickness: parseFloat(document.getElementById('paint2Thickness').value),
-                        price: parseFloat(document.getElementById('paint2Price').value)
-                    }
-                };
-            } else {
-                data = {
-                    calc_type: 'practical',
-                    product_area: parseFloat(document.getElementById('productArea2').value),
-                    paint1: {
-                        name: document.getElementById('paint1Name2').value,
-                        real_consumption: parseFloat(document.getElementById('paint1Consumption').value),
-                        price: parseFloat(document.getElementById('paint1Price2').value)
-                    },
-                    paint2: {
-                        name: document.getElementById('paint2Name2').value,
-                        real_consumption: parseFloat(document.getElementById('paint2Consumption').value),
-                        price: parseFloat(document.getElementById('paint2Price2').value)
-                    }
-                };
-            }
-            
-            fetch('/api/calculate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            })
-            .then(r => r.json())
-            .then(result => {
-                document.getElementById('loading').style.display = 'none';
-                if (result.success) {
-                    currentResult = result.result;
-                    displayResults(result.result);
-                    document.getElementById('typeSelector').style.display = 'none';
-                    document.getElementById('theoreticalCalc').style.display = 'none';
-                    document.getElementById('practicalCalc').style.display = 'none';
-                    document.getElementById('results').style.display = 'block';
-                } else {
-                    alert('Ошибка: ' + result.error);
-                }
-            })
-            .catch(() => {
-                document.getElementById('loading').style.display = 'none';
-                alert('Ошибка соединения');
-            });
-        }
-        
-        function displayResults(result) {
-            const grid = document.getElementById('resultsGrid');
-            const isTheoretical = result.comparison.calculation_type === 'theoretical';
-            
-            let paint1Details = '';
-            let paint2Details = '';
-            
-            if (isTheoretical) {
-                paint1Details = `
-                    <p><strong>Плотность:</strong> ${result.paint1.density} г/см³</p>
-                    <p><strong>Толщина:</strong> ${result.paint1.thickness} мкм</p>
-                    <p><strong>Покрытие:</strong> ${result.paint1.coverage_area} м²/кг</p>
-                    <p><strong>Расход:</strong> ${result.paint1.practical_consumption} кг</p>
-                    <p><strong>Цена м²:</strong> ${result.paint1.cost_per_sqm} руб</p>
-                `;
-                paint2Details = `
-                    <p><strong>Плотность:</strong> ${result.paint2.density} г/см³</p>
-                    <p><strong>Толщина:</strong> ${result.paint2.thickness} мкм</p>
-                    <p><strong>Покрытие:</strong> ${result.paint2.coverage_area} м²/кг</p>
-                    <p><strong>Расход:</strong> ${result.paint2.practical_consumption} кг</p>
-                    <p><strong>Цена м²:</strong> ${result.paint2.cost_per_sqm} руб</p>
-                `;
-            } else {
-                paint1Details = `
-                    <p><strong>Факт. расход:</strong> ${result.paint1.real_consumption} кг</p>
-                    <p><strong>Покрытие:</strong> ${result.paint1.coverage_area} м²/кг</p>
-                    <p><strong>Цена м²:</strong> ${result.paint1.cost_per_sqm} руб</p>
-                `;
-                paint2Details = `
-                    <p><strong>Факт. расход:</strong> ${result.paint2.real_consumption} кг</p>
-                    <p><strong>Покрытие:</strong> ${result.paint2.coverage_area} м²/кг</p>
-                    <p><strong>Цена м²:</strong> ${result.paint2.cost_per_sqm} руб</p>
-                `;
-            }
-            
-            grid.innerHTML = `
-                <div class="result-card">
-                    <h3>${result.paint1.name}</h3>
-                    <p><strong>Цена:</strong> ${result.paint1.price_per_kg} руб/кг</p>
-                    ${paint1Details}
-                    <div class="result-value">💰 ${result.paint1.product_cost} руб</div>
-                </div>
-                
-                <div class="result-card">
-                    <h3>${result.paint2.name}</h3>
-                    <p><strong>Цена:</strong> ${result.paint2.price_per_kg} руб/кг</p>
-                    ${paint2Details}
-                    <div class="result-value">💰 ${result.paint2.product_cost} руб</div>
-                </div>
-                
-                <div class="result-card">
-                    <h3>📈 Сравнение</h3>
-                    <p><strong>Разница в стоимости:</strong></p>
-                    <div class="result-value" style="color: ${result.comparison.cost_difference > 0 ? '#4CAF50' : '#f44336'}">
-                        ${Math.abs(result.comparison.cost_difference)} руб
-                    </div>
-                    <p><strong>Процентная разница:</strong></p>
-                    <div class="result-value" style="color: ${result.comparison.cost_difference_percent > 0 ? '#4CAF50' : '#f44336'}">
-                        ${Math.abs(result.comparison.cost_difference_percent)}%
-                    </div>
-                    <p><strong>Выгоднее:</strong></p>
-                    <div class="result-value" style="color: #4CAF50">
-                        ${result.comparison.cheaper_paint_name}
-                    </div>
-                    <p><strong>Тип расчета:</strong> ${isTheoretical ? 'Теоретический 🎓' : 'Практический 🔧'}</p>
-                </div>
-            `;
-        }
-        
-        function selectSurface(element, type) {
-            selectedSurface = type;
-            document.querySelectorAll('.surface-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            element.classList.add('selected');
-        }
-        
-        function openOfferModal() {
-            document.getElementById('offerModal').style.display = 'block';
-            if (currentResult) {
-                // Автоматически рассчитываем примерное количество краски
-                let suggestedQuantity = 10; // по умолчанию
-                
-                if (currentResult.comparison.calculation_type === 'practical') {
-                    suggestedQuantity = (currentResult.paint1.real_consumption + currentResult.paint2.real_consumption) / 2;
-                } else if (currentResult.comparison.calculation_type === 'theoretical') {
-                    suggestedQuantity = (currentResult.paint1.practical_consumption + currentResult.paint2.practical_consumption) / 2;
-                }
-                
-                document.getElementById('offerQuantityKg').value = Math.max(0.1, Math.round(suggestedQuantity * 10) / 10);
-            }
-        }
-        
-        function closeOfferModal() {
-            document.getElementById('offerModal').style.display = 'none';
-            document.getElementById('offerForm').reset();
-            document.getElementById('successMessage').style.display = 'none';
-            document.getElementById('offerForm').style.display = 'block';
-            selectedSurface = '';
-            document.querySelectorAll('.surface-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-        }
-        
-        // Обработка отправки формы заказа
-        document.getElementById('offerForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (!selectedSurface) {
-                alert('Выберите тип поверхности');
-                return;
-            }
-            
-            const quantityKg = parseFloat(document.getElementById('offerQuantityKg').value);
-            if (!quantityKg || quantityKg <= 0) {
-                alert('Укажите количество краски в кг (больше 0)');
-                return;
-            }
-            
-            const data = {
-                surface_type: selectedSurface,
-                color: document.getElementById('offerColor').value,
-                quantity_kg: quantityKg,
-                name: document.getElementById('offerName').value,
-                phone: document.getElementById('offerPhone').value,
-                email: document.getElementById('offerEmail').value,
-                comment: document.getElementById('offerComment').value
-            };
-            
-            // Показываем детали заказа
-            const surfaceNames = {
-                'gloss': 'Глянцевая',
-                'matte': 'Матовая',
-                'shagreen': 'Шагрень',
-                'moire': 'Муар',
-                'antique': 'Антик'
-            };
-            
-            const orderDetails = `
-                <strong>Тип поверхности:</strong> ${surfaceNames[selectedSurface] || selectedSurface}<br>
-                <strong>Цвет:</strong> ${data.color}<br>
-                <strong>Количество краски:</strong> ${data.quantity_kg} кг
-            `;
-            
-            document.getElementById('orderDetails').innerHTML = orderDetails;
-            
-            // Отправка на сервер
-            fetch('/api/offer', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            })
-            .then(r => r.json())
-            .then(result => {
-                if (result.success) {
-                    document.getElementById('offerForm').style.display = 'none';
-                    document.getElementById('successMessage').style.display = 'block';
-                } else {
-                    alert('Ошибка: ' + result.error);
-                }
-            })
-            .catch(error => {
-                alert('Ошибка соединения: ' + error);
-            });
-        });
-        
-        function resetForm() {
-            if (currentCalcType === 'theoretical') {
-                document.getElementById('productArea').value = '1.0';
-                document.getElementById('lossFactor').value = '15';
-                document.getElementById('paint1Name').value = 'Полиэстер';
-                document.getElementById('paint1Density').value = '1.5';
-                document.getElementById('paint1Thickness').value = '60';
-                document.getElementById('paint1Price').value = '450';
-                document.getElementById('paint2Name').value =
+<div class="container">
+
+<div class="header">
+<h1>🎨 Калькулятор порошковых красок</h1>
+<p>Сравнение, расход, реальная экономия</p>
+</div>
+
+<!-- выбор типа -->
+<div class="calc-type-selector" id="typeSelector">
+<h2>Тип расчёта</h2>
+<div class="calc-types">
+<div class="calc-type-btn active"
+onclick="selectCalcType(event,'theoretical')">
+🎓 Теоретический
+</div>
+<div class="calc-type-btn"
+onclick="selectCalcType(event,'practical')">
+🔧 Практический
+</div>
+</div>
+<div style="text-align:center">
+<button class="calculate-btn" onclick="showCalculator()">Начать</button>
+</div>
+</div>
+
+<!-- ТЕОРЕТИЧЕСКИЙ -->
+<div class="calculator" id="theoreticalCalc" style="display:none">
+<h2>🎓 Теоретический расчёт</h2>
+
+<div class="input-group">
+<div class="input-field">
+<label>Площадь изделия (м²)</label>
+<input id
