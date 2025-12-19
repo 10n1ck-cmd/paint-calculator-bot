@@ -96,7 +96,7 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("calculate", self.calculate_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
-        self.application.add_handler(CommandHandler("offer", self.offer_command))
+        self.application.add_handler(CommandHandler("offer", self.offer_command))  # ДОБАВЛЕНА ЭТА СТРОКА
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
     
@@ -117,6 +117,28 @@ class TelegramBot:
         user_id = update.effective_user.id
         user_data[user_id] = {'step': 1, 'paint1': {}, 'paint2': {}}
         await update.message.reply_text("📏 *ШАГ 1: Введите площадь изделия в м²*\nПример: 2.5", parse_mode='Markdown')
+    
+    # ДОБАВЬТЕ ЭТОТ МЕТОД - ОН ОТСУТСТВОВАЛ
+    async def offer_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Команда /offer для запроса предложения"""
+        user_id = update.effective_user.id
+        user_data[user_id] = {'step': 'offer_1'}
+        
+        keyboard = [
+            [InlineKeyboardButton("Глянцевая", callback_data='gloss')],
+            [InlineKeyboardButton("Матовая", callback_data='matte')],
+            [InlineKeyboardButton("Шагрень", callback_data='shagreen')],
+            [InlineKeyboardButton("Муар", callback_data='moire')],
+            [InlineKeyboardButton("Антик", callback_data='antique')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "🎨 *ЗАПРОС КОММЕРЧЕСКОГО ПРЕДЛОЖЕНИЯ*\n\n"
+            "Выберите тип поверхности:",
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
@@ -356,11 +378,20 @@ def api_offer():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    """Webhook для Telegram"""
+    update = Update.de_json(request.get_json(), bot.application.bot)
+    asyncio.run(bot.application.process_update(update))
+    return 'OK'
+
 def run_bot():
+    """Запуск бота в отдельном потоке"""
     bot.application.run_polling()
 
 if __name__ == '__main__':
     if os.environ.get('RENDER'):
+        # На Render используем вебхуки
         bot.application.run_webhook(
             listen="0.0.0.0",
             port=PORT,
@@ -368,6 +399,7 @@ if __name__ == '__main__':
             webhook_url=f"{WEBHOOK_URL}/{TELEGRAM_TOKEN}"
         )
     else:
+        # Локально используем polling
         bot_thread = Thread(target=run_bot)
         bot_thread.start()
         app.run(host='0.0.0.0', port=PORT, debug=False)
