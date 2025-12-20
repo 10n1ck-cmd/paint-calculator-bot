@@ -3,159 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Калькулятор порошковой краски</title>
-
+<title>Paint Calc</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-body {
-    font-family: system-ui, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-}
-.container {
-    max-width: 420px;
-    margin: auto;
-    padding: 16px;
-}
-button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 8px;
-    border: none;
-    border-radius: 8px;
-    background: #2a9df4;
-    color: #fff;
-    font-size: 16px;
-}
-input {
-    width: 100%;
-    padding: 10px;
-    margin-top: 6px;
-    font-size: 16px;
-}
-.card {
-    background: #fff;
-    padding: 12px;
-    margin-top: 12px;
-    border-radius: 10px;
-}
-.hidden { display: none; }
-.result {
-    background: #e9f5ff;
-    padding: 10px;
-    border-radius: 8px;
-    margin-top: 12px;
-}
-.error {
-    background: #ffdede;
-    padding: 10px;
-    border-radius: 8px;
-    margin-top: 12px;
-}
+body{font-family:system-ui;background:#f4f6f8;margin:0}
+.container{max-width:420px;margin:auto;padding:16px}
+input,button{width:100%;padding:10px;margin-top:6px;font-size:15px}
+button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
+.card{background:#fff;padding:12px;border-radius:10px;margin-top:10px}
+.result{background:#e9f5ff;padding:10px;border-radius:8px}
 </style>
 </head>
 
 <body>
 <div class="container">
-<h2>🎨 Калькулятор</h2>
 
-<button onclick="showTheory()">🎓 Теория</button>
-<button onclick="showPractice()">🔧 Практика</button>
+<h3>📊 Сравнение двух красок</h3>
 
-<div id="theory" class="card hidden">
-    <input id="t_area" placeholder="Площадь м²">
-    <input id="t_density" placeholder="Плотность г/см³">
-    <input id="t_thickness" placeholder="Толщина мкм">
-    <input id="t_price" placeholder="Цена ₽/кг">
-    <button onclick="calcTheory()">Рассчитать</button>
+<div class="card">
+<input id="area" placeholder="Площадь м²">
+
+<h4>Краска 1</h4>
+<input id="p1_name" placeholder="Название">
+<input id="p1_cons" placeholder="Расход кг">
+<input id="p1_price" placeholder="Цена ₽">
+
+<h4>Краска 2</h4>
+<input id="p2_name" placeholder="Название">
+<input id="p2_cons" placeholder="Расход кг">
+<input id="p2_price" placeholder="Цена ₽">
+
+<button onclick="calc()">Рассчитать</button>
 </div>
 
-<div id="practice" class="card hidden">
-    <input id="p_area" placeholder="Площадь м²">
-    <input id="p_cons" placeholder="Расход кг">
-    <input id="p_price" placeholder="Цена ₽/кг">
-    <button onclick="calcPractice()">Рассчитать</button>
+<div id="out" class="result"></div>
+
+<button onclick="makePDF()">📄 PDF</button>
+
+<div class="card">
+<h4>🛒 Заказ</h4>
+<input id="name" placeholder="Имя">
+<input id="phone" placeholder="Телефон">
+<input id="comment" placeholder="Комментарий">
+<button onclick="order()">Отправить заказ</button>
 </div>
 
-<div id="msg" class="result hidden"></div>
 </div>
 
 <script>
 Telegram.WebApp.expand();
+let last;
 
-function showTheory(){
-    theory.classList.remove('hidden');
-    practice.classList.add('hidden');
-    msg.classList.add('hidden');
+function v(id){return parseFloat(document.getElementById(id).value.replace(',', '.'));}
+
+async function calc(){
+    const data = {
+        mode:'practical',
+        area:v('area'),
+        paints:[
+            {name:p1_name.value, consumption:v('p1_cons'), price:v('p1_price')},
+            {name:p2_name.value, consumption:v('p2_cons'), price:v('p2_price')}
+        ]
+    };
+    const r = await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json());
+    last = r;
+
+    out.innerHTML = r.results.map(p=>`
+        <b>${p.name}</b><br>
+        Стоимость: ${p.cost} ₽<br>
+        Цена м²: ${p.cost_per_sqm} ₽<br><br>
+    `).join('') + `<b>Выгоднее: ${r.cheaper.name}</b>`;
 }
 
-function showPractice(){
-    practice.classList.remove('hidden');
-    theory.classList.add('hidden');
-    msg.classList.add('hidden');
+async function makePDF(){
+    const r = await fetch('/api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({area:area.value,results:last.results})});
+    const blob = await r.blob();
+    Telegram.WebApp.openLink(URL.createObjectURL(blob));
 }
 
-function num(id){
-    const v = document.getElementById(id).value.replace(',', '.');
-    if(!v) throw "Заполните все поля";
-    return parseFloat(v);
-}
-
-async function send(data){
-    const r = await fetch('/api/calculate',{
+async function order(){
+    await fetch('/api/order',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(data)
+        body:JSON.stringify({
+            name:name.value,
+            phone:phone.value,
+            comment:comment.value,
+            paint:last.cheaper.name,
+            cost:last.cheaper.cost
+        })
     });
-    const j = await r.json();
-    if(!r.ok) throw j.error;
-    return j;
-}
-
-async function calcTheory(){
-    try{
-        const r = await send({
-            mode:'theoretical',
-            area:num('t_area'),
-            paint1:{
-                density:num('t_density'),
-                thickness:num('t_thickness'),
-                price:num('t_price')
-            }
-        });
-        show(r.paint1);
-    }catch(e){ showError(e); }
-}
-
-async function calcPractice(){
-    try{
-        const r = await send({
-            mode:'practical',
-            area:num('p_area'),
-            paint1:{
-                consumption:num('p_cons'),
-                price:num('p_price')
-            }
-        });
-        show(r.paint1);
-    }catch(e){ showError(e); }
-}
-
-function show(p){
-    msg.className = "result";
-    msg.innerHTML =
-        `Расход: <b>${p.consumption} кг</b><br>
-         Покрытие: <b>${p.coverage} м²/кг</b><br>
-         Стоимость: <b>${p.cost} ₽</b><br>
-         Цена м²: <b>${p.cost_per_sqm} ₽</b>`;
-    msg.classList.remove('hidden');
-}
-
-function showError(e){
-    msg.className = "error";
-    msg.innerText = "Ошибка: " + e;
-    msg.classList.remove('hidden');
+    alert('Заказ отправлен');
 }
 </script>
 </body>
