@@ -1,84 +1,52 @@
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import requests
-import os
+from flask import Flask, request, jsonify, render_template, send_file
+from io import BytesIO
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
 
-TOKEN = os.environ.get("TELEGRAM_TOKEN")
-API_URL = os.environ.get("API_URL", "http://127.0.0.1:5000/api/calculate")
+app = Flask(__name__)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [["🎓 Теория", "🔧 Практика"]]
-    await update.message.reply_text(
-        "Калькулятор порошковой краски\nВыберите тип расчёта:",
-        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True)
-    )
+pdfmetrics.registerFont(TTFont("DejaVu", "fonts/DejaVuSans.ttf"))
 
-async def theory(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Формат:\n"
-        "ПЛОЩАДЬ;ПЛОТНОСТЬ;ТОЛЩИНА;ЦЕНА\n\n"
-        "Пример:\n"
-        "12;1.4;80;450"
-    )
-    context.user_data["mode"] = "theoretical"
+class Calc:
 
-async def practice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Формат:\n"
-        "ПЛОЩАДЬ;РАСХОД;ЦЕНА\n\n"
-        "Пример:\n"
-        "12;0.85;450"
-    )
-    context.user_data["mode"] = "practical"
+    @staticmethod
+    def theory(p, area):
+        coverage = 1000 / (p["density"] * p["thickness"])
+        cons = (area / coverage) * 1.15
+        cost = cons * p["price"]
+        return cons, coverage, cost
 
-async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.replace(",", ".")
-    if "mode" not in context.user_data:
-        return
+    @staticmethod
+    def practice(p, area):
+        coverage = area / p["consumption"]
+        cost = p["consumption"] * p["price"]
+        return p["consumption"], coverage, cost
 
-    try:
-        parts = list(map(float, text.split(";")))
-        if context.user_data["mode"] == "theoretical":
-            area, density, thickness, price = parts
-            payload = {
-                "mode": "theoretical",
-                "area": area,
-                "paint1": {"name": "Краска", "density": density, "thickness": thickness, "price": price},
-                "paint2": {"name": "Краска", "density": density, "thickness": thickness, "price": price}
-            }
-        else:
-            area, cons, price = parts
-            payload = {
-                "mode": "practical",
-                "area": area,
-                "paint1": {"name": "Краска", "consumption": cons, "price": price},
-                "paint2": {"name": "Краска", "consumption": cons, "price": price}
-            }
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-        r = requests.post(API_URL, json=payload).json()
-        p = r["paint1"]
+@app.route("/api/calculate", methods=["POST"])
+def calculate():
+    d = request.json
+    p = d["paint1"]
+    area = d["area"]
 
-        await update.message.reply_text(
-            f"Результат:\n"
-            f"Расход: {p['consumption']} кг\n"
-            f"Покрытие: {p['coverage']} м²/кг\n"
-            f"Стоимость: {p['cost']} ₽\n"
-            f"Цена м²: {p['cost_per_sqm']} ₽"
-        )
+    if d["mode"] == "theoretical":
+        cons, cov, cost = Calc.theory(p, area)
+    else:
+        cons, cov, cost = Calc.practice(p, area)
 
-    except Exception:
-        await update.message.reply_text("Ошибка формата. Попробуйте ещё раз.")
-
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("theory", theory))
-    app.add_handler(CommandHandler("practice", practice))
-    app.add_handler(CommandHandler("t", theory))
-    app.add_handler(CommandHandler("p", practice))
-    app.add_handler(CommandHandler("calc", handle))
-    app.add_handler(CommandHandler("go", handle))
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+    return jsonify({
+        "paint1": {
+            "name": p["name"],
+            "consumption": round(cons, 3),
+            "coverage": round(cov, 2),
+            "cost": round(cost, 2),
+            "cost_per_sqm": round(cost / area, 2)
+        }
+    })
