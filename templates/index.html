@@ -9,44 +9,73 @@
 <style>
 body{font-family:system-ui;background:#f4f6f8;margin:0}
 .container{max-width:420px;margin:auto;padding:16px}
-input,button{width:100%;padding:10px;margin-top:6px;font-size:15px}
+button,input{width:100%;padding:10px;margin-top:6px;font-size:15px}
 button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
 .card{background:#fff;padding:12px;border-radius:10px;margin-top:10px}
-.result{background:#e9f5ff;padding:10px;border-radius:8px}
+.result{background:#e9f5ff;padding:10px;border-radius:8px;margin-top:10px}
+.hidden{display:none}
 </style>
 </head>
 
 <body>
 <div class="container">
 
-<h3>📊 Сравнение двух красок</h3>
+<h3>🎨 Калькулятор</h3>
 
-<div class="card">
-<input id="area" placeholder="Площадь м²">
+<button onclick="show('theory')">🎓 Теория</button>
+<button onclick="show('practice')">🔧 Практика</button>
 
-<h4>Краска 1</h4>
-<input id="p1_name" placeholder="Название">
-<input id="p1_cons" placeholder="Расход кг">
-<input id="p1_price" placeholder="Цена ₽">
+<!-- ТЕОРИЯ -->
+<div id="theory" class="card hidden">
+<h4>🎓 Теоретический расчёт</h4>
+<input id="t_area" placeholder="Площадь м²">
 
-<h4>Краска 2</h4>
-<input id="p2_name" placeholder="Название">
-<input id="p2_cons" placeholder="Расход кг">
-<input id="p2_price" placeholder="Цена ₽">
+<h5>Краска 1</h5>
+<input id="t1_name" placeholder="Название">
+<input id="t1_d" placeholder="Плотность">
+<input id="t1_t" placeholder="Толщина">
+<input id="t1_p" placeholder="Цена">
 
-<button onclick="calc()">Рассчитать</button>
+<h5>Краска 2</h5>
+<input id="t2_name" placeholder="Название">
+<input id="t2_d" placeholder="Плотность">
+<input id="t2_t" placeholder="Толщина">
+<input id="t2_p" placeholder="Цена">
+
+<button onclick="calcTheory()">Рассчитать</button>
 </div>
 
-<div id="out" class="result"></div>
+<!-- ПРАКТИКА -->
+<div id="practice" class="card hidden">
+<h4>🔧 Практический расчёт</h4>
+<input id="p_area" placeholder="Площадь м²">
 
-<button onclick="makePDF()">📄 PDF</button>
+<h5>Краска 1</h5>
+<input id="p1_name" placeholder="Название">
+<input id="p1_c" placeholder="Расход кг">
+<input id="p1_p" placeholder="Цена">
 
-<div class="card">
+<h5>Краска 2</h5>
+<input id="p2_name" placeholder="Название">
+<input id="p2_c" placeholder="Расход кг">
+<input id="p2_p" placeholder="Цена">
+
+<button onclick="calcPractice()">Рассчитать</button>
+</div>
+
+<div id="out" class="result hidden"></div>
+
+<button id="orderBtn" class="hidden" onclick="showOrder()">
+🔥 Получить более выгодное предложение
+</button>
+
+<!-- ЗАКАЗ -->
+<div id="orderForm" class="card hidden">
 <h4>🛒 Заказ</h4>
-<input id="name" placeholder="Имя">
-<input id="phone" placeholder="Телефон">
-<input id="comment" placeholder="Комментарий">
-<button onclick="order()">Отправить заказ</button>
+<input id="surface" placeholder="Тип поверхности">
+<input id="color" placeholder="Цвет">
+<input id="qty" placeholder="Количество (кг)">
+<button onclick="order()">Отправить заявку</button>
 </div>
 
 </div>
@@ -55,31 +84,66 @@ button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
 Telegram.WebApp.expand();
 let last;
 
-function v(id){return parseFloat(document.getElementById(id).value.replace(',', '.'));}
+function v(id){return parseFloat(document.getElementById(id).value.replace(',','.'));}
 
-async function calc(){
-    const data = {
-        mode:'practical',
-        area:v('area'),
-        paints:[
-            {name:p1_name.value, consumption:v('p1_cons'), price:v('p1_price')},
-            {name:p2_name.value, consumption:v('p2_cons'), price:v('p2_price')}
-        ]
-    };
-    const r = await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json());
-    last = r;
-
-    out.innerHTML = r.results.map(p=>`
-        <b>${p.name}</b><br>
-        Стоимость: ${p.cost} ₽<br>
-        Цена м²: ${p.cost_per_sqm} ₽<br><br>
-    `).join('') + `<b>Выгоднее: ${r.cheaper.name}</b>`;
+function show(id){
+    theory.classList.add('hidden');
+    practice.classList.add('hidden');
+    out.classList.add('hidden');
+    orderBtn.classList.add('hidden');
+    orderForm.classList.add('hidden');
+    document.getElementById(id).classList.remove('hidden');
 }
 
-async function makePDF(){
-    const r = await fetch('/api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({area:area.value,results:last.results})});
-    const blob = await r.blob();
-    Telegram.WebApp.openLink(URL.createObjectURL(blob));
+async function send(data){
+    const r = await fetch('/api/calc',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+    });
+    return await r.json();
+}
+
+async function calcTheory(){
+    last = await send({
+        mode:'theory',
+        area:v('t_area'),
+        paints:[
+            {name:t1_name.value,density:v('t1_d'),thickness:v('t1_t'),price:v('t1_p')},
+            {name:t2_name.value,density:v('t2_d'),thickness:v('t2_t'),price:v('t2_p')}
+        ]
+    });
+    showResult();
+}
+
+async function calcPractice(){
+    last = await send({
+        mode:'practice',
+        area:v('p_area'),
+        paints:[
+            {name:p1_name.value,consumption:v('p1_c'),price:v('p1_p')},
+            {name:p2_name.value,consumption:v('p2_c'),price:v('p2_p')}
+        ]
+    });
+    showResult();
+}
+
+function showResult(){
+    out.innerHTML =
+        last.results.map(r=>`
+            <b>${r.name}</b><br>
+            Стоимость: ${r.cost} ₽<br>
+            Цена м²: ${r.cost_per_sqm} ₽<br><br>
+        `).join('')
+        + `<b>Выгоднее: ${last.cheaper.name}</b><br>`
+        + `<b>Экономия: ${last.diff_percent}%</b>`;
+
+    out.classList.remove('hidden');
+    orderBtn.classList.remove('hidden');
+}
+
+function showOrder(){
+    orderForm.classList.remove('hidden');
 }
 
 async function order(){
@@ -87,14 +151,17 @@ async function order(){
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-            name:name.value,
-            phone:phone.value,
-            comment:comment.value,
+            mode:last.mode,
+            area:last.area,
             paint:last.cheaper.name,
+            economy:last.diff_percent,
+            surface:surface.value,
+            color:color.value,
+            qty:qty.value,
             cost:last.cheaper.cost
         })
     });
-    alert('Заказ отправлен');
+    alert("Заявка отправлена");
 }
 </script>
 </body>
