@@ -7,73 +7,94 @@
 <style>
 body{font-family:Arial;background:#f4f6f8;padding:15px}
 .container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px}
-input,select,button{width:100%;padding:10px;margin-top:5px}
-button{background:#2d7ef7;color:#fff;font-size:16px;margin-top:15px}
+.block{border:1px solid #ccc;padding:15px;margin-top:15px;border-radius:8px}
 .hidden{display:none}
 table{width:100%;border-collapse:collapse;margin-top:20px}
 th,td{border:1px solid #ccc;padding:8px;text-align:center}
 .good{background:#e6ffe6}
-.bad{background:#ffecec}
 </style>
 </head>
 
 <body>
 <div class="container">
-<h1>🎨 Калькулятор</h1>
+<h1>🎨 Калькулятор порошковой краски</h1>
 
-<select id="calcType">
+<select id="mode" onchange="toggle()">
 <option value="theoretical">Теоретический</option>
 <option value="practical">Практический</option>
 </select>
 
-<input id="product_area" placeholder="Площадь м²">
+<input id="area" placeholder="Площадь м²">
 
+<div id="theory" class="block">
+<h3>Теория</h3>
+<input id="t1_name" placeholder="Краска 1">
+<input id="t1_density" placeholder="Плотность">
+<input id="t1_thickness" placeholder="Толщина">
+<input id="t1_price" placeholder="Цена">
+
+<input id="t2_name" placeholder="Краска 2">
+<input id="t2_density" placeholder="Плотность">
+<input id="t2_thickness" placeholder="Толщина">
+<input id="t2_price" placeholder="Цена">
+</div>
+
+<div id="practice" class="block hidden">
+<h3>Практика</h3>
 <input id="p1_name" placeholder="Краска 1">
-<input id="p1_density" placeholder="Плотность / Расход">
-<input id="p1_thickness" placeholder="Толщина">
+<input id="p1_cons" placeholder="Расход">
 <input id="p1_price" placeholder="Цена">
 
 <input id="p2_name" placeholder="Краска 2">
-<input id="p2_density" placeholder="Плотность / Расход">
-<input id="p2_thickness" placeholder="Толщина">
+<input id="p2_cons" placeholder="Расход">
 <input id="p2_price" placeholder="Цена">
+</div>
 
 <button onclick="calc()">Рассчитать</button>
-<button onclick="pdf()">📄 Скачать PDF</button>
+<button onclick="pdf()">📄 PDF</button>
 
-<pre id="out"></pre>
+<table id="result" class="hidden"></table>
 </div>
 
 <script>
 let last=null
 const num=v=>parseFloat(String(v).replace(',','.'))||0
 
+function toggle(){
+theory.classList.toggle('hidden',mode.value!=='theoretical')
+practice.classList.toggle('hidden',mode.value!=='practical')
+}
+
 async function calc(){
-const d={
-calc_type:calcType.value,
-product_area:num(product_area.value),
-paint1:{
-name:p1_name.value,
-density:num(p1_density.value),
-thickness:num(p1_thickness.value),
-real_consumption:num(p1_density.value),
-price:num(p1_price.value)
-},
-paint2:{
-name:p2_name.value,
-density:num(p2_density.value),
-thickness:num(p2_thickness.value),
-real_consumption:num(p2_density.value),
-price:num(p2_price.value)
+let data={
+mode:mode.value,
+area:num(area.value)
 }
+
+if(mode.value==='theoretical'){
+data.paint1={name:t1_name.value,density:num(t1_density.value),thickness:num(t1_thickness.value),price:num(t1_price.value)}
+data.paint2={name:t2_name.value,density:num(t2_density.value),thickness:num(t2_thickness.value),price:num(t2_price.value)}
+}else{
+data.paint1={name:p1_name.value,consumption:num(p1_cons.value),price:num(p1_price.value)}
+data.paint2={name:p2_name.value,consumption:num(p2_cons.value),price:num(p2_price.value)}
 }
-const r=await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)})
-last=(await r.json()).result
-out.textContent=JSON.stringify(last,null,2)
+
+let r=await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+last=await r.json()
+render(last)
+}
+
+function render(r){
+result.classList.remove('hidden')
+result.innerHTML=`
+<tr><th>Краска</th><th>Расход</th><th>Покрытие</th><th>Стоимость</th><th>Цена м²</th></tr>
+<tr class="good"><td>${r.paint1.name}</td><td>${r.paint1.consumption}</td><td>${r.paint1.coverage}</td><td>${r.paint1.cost}</td><td>${r.paint1.cost_per_sqm}</td></tr>
+<tr><td>${r.paint2.name}</td><td>${r.paint2.consumption}</td><td>${r.paint2.coverage}</td><td>${r.paint2.cost}</td><td>${r.paint2.cost_per_sqm}</td></tr>
+`
 }
 
 async function pdf(){
-if(!last){alert('Сначала рассчитайте');return}
+if(!last){alert('Сначала расчет');return}
 const r=await fetch('/api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(last)})
 const b=await r.blob()
 const a=document.createElement('a')
