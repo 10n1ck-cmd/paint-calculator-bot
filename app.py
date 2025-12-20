@@ -1,37 +1,42 @@
 from flask import Flask, request, jsonify, render_template, send_file
 from io import BytesIO
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
+import os
 
 app = Flask(__name__)
 
-# ===== КАЛЬКУЛЯТОР =====
+# === ШРИФТ С КИРИЛЛИЦЕЙ ===
+FONT_PATH = "fonts/DejaVuSans.ttf"
+pdfmetrics.registerFont(TTFont("DejaVu", FONT_PATH))
 
+# === КАЛЬКУЛЯТОР ===
 class PaintCalculator:
 
     @staticmethod
     def theoretical(p, area):
         coverage = 1000 / (p['density'] * p['thickness'])
-        theoretical = area / coverage
-        practical = theoretical * 1.15
+        practical = (area / coverage) * 1.15
         cost = practical * p['price']
         return {
-            "coverage_area": round(coverage, 2),
-            "practical_consumption": round(practical, 3),
-            "product_cost": round(cost, 2),
+            "consumption": round(practical, 3),
+            "coverage": round(coverage, 2),
+            "cost": round(cost, 2),
             "cost_per_sqm": round(cost / area, 2)
         }
 
     @staticmethod
     def practical(p, area):
-        cost = p['real_consumption'] * p['price']
-        coverage = area / p['real_consumption']
+        cost = p['consumption'] * p['price']
+        coverage = area / p['consumption']
         return {
-            "real_consumption": round(p['real_consumption'], 3),
-            "coverage_area": round(coverage, 2),
-            "product_cost": round(cost, 2),
+            "consumption": round(p['consumption'], 3),
+            "coverage": round(coverage, 2),
+            "cost": round(cost, 2),
             "cost_per_sqm": round(cost / area, 2)
         }
 
@@ -40,82 +45,77 @@ class PaintCalculator:
         r1 = PaintCalculator.theoretical(p1, area) if mode == "theoretical" else PaintCalculator.practical(p1, area)
         r2 = PaintCalculator.theoretical(p2, area) if mode == "theoretical" else PaintCalculator.practical(p2, area)
 
-        diff = r2["product_cost"] - r1["product_cost"]
-        cheaper = "paint1" if diff > 0 else "paint2"
+        cheaper = "paint1" if r1["cost"] < r2["cost"] else "paint2"
 
         return {
+            "mode": mode,
+            "area": area,
             "paint1": {**p1, **r1},
             "paint2": {**p2, **r2},
-            "comparison": {
-                "cheaper_paint": cheaper,
-                "calculation_type": mode,
-                "difference": abs(round(diff, 2))
-            },
-            "product_area": area
+            "cheaper": cheaper
         }
-
-
-# ===== ROUTES =====
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-
 @app.route("/api/calculate", methods=["POST"])
 def calculate():
     d = request.json
-    result = PaintCalculator.compare(
+    res = PaintCalculator.compare(
         d["paint1"], d["paint2"],
-        d["product_area"], d["calc_type"]
+        d["area"], d["mode"]
     )
-    return jsonify(success=True, result=result)
-
+    return jsonify(res)
 
 @app.route("/api/pdf", methods=["POST"])
 def pdf():
     r = request.json
     buf = BytesIO()
 
-    doc = SimpleDocTemplate(buf, pagesize=A4)
     styles = getSampleStyleSheet()
-    elems = []
+    styles["Normal"].fontName = "DejaVu"
+    styles["Title"].fontName = "DejaVu"
 
-    elems.append(Paragraph("Отчет расчета порошковой краски", styles["Title"]))
-    elems.append(Paragraph(f"Площадь изделия: {r['product_area']} м²", styles["Normal"]))
-    elems.append(Paragraph(f"Тип расчета: {r['comparison']['calculation_type']}", styles["Normal"]))
+    doc = SimpleDocTemplate(buf, pagesize=A4)
+    elements = []
+
+    elements.append(Paragraph("Отчет расчета порошковой краски", styles["Title"]))
+    elements.append(Paragraph(f"Тип расчета: {r['mode']}", styles["Normal"]))
+    elements.append(Paragraph(f"Площадь: {r['area']} м²", styles["Normal"]))
 
     table_data = [
-        ["Краска", "Расход кг", "Покрытие м²/кг", "Стоимость ₽", "Цена м² ₽"]
+        ["Краска", "Расход кг", "Покрытие м²/кг", "Стоимость ₽", "Цена м² ₽"],
+        [
+            r["paint1"]["name"],
+            r["paint1"]["consumption"],
+            r["paint1"]["coverage"],
+            r["paint1"]["cost"],
+            r["paint1"]["cost_per_sqm"]
+        ],
+        [
+            r["paint2"]["name"],
+            r["paint2"]["consumption"],
+            r["paint2"]["coverage"],
+            r["paint2"]["cost"],
+            r["paint2"]["cost_per_sqm"]
+        ]
     ]
-
-    for k in ["paint1", "paint2"]:
-        p = r[k]
-        table_data.append([
-            p["name"],
-            p.get("practical_consumption", p.get("real_consumption")),
-            p["coverage_area"],
-            p["product_cost"],
-            p["cost_per_sqm"]
-        ])
 
     table = Table(table_data)
     table.setStyle(TableStyle([
         ("GRID", (0,0), (-1,-1), 1, colors.grey),
         ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+        ("FONT", (0,0), (-1,-1), "DejaVu")
     ]))
 
-    elems.append(table)
-    elems.append(Paragraph(
-        f"Выгодная краска: {r['comparison']['cheaper_paint']}",
-        styles["Heading2"]
-    ))
+    elements.append(table)
+    elements.append(Paragraph(f"Выгодная краска: {r['cheaper']}", styles["Normal"]))
 
-    doc.build(elems)
+    doc.build(elements)
     buf.seek(0)
 
     return send_file(buf, as_attachment=True, download_name="calculation.pdf", mimetype="application/pdf")
-
 
 if __name__ == "__main__":
     app.run()
