@@ -1,121 +1,84 @@
-from flask import Flask, request, jsonify, render_template, send_file
-from io import BytesIO
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import requests
 import os
 
-app = Flask(__name__)
+TOKEN = os.environ.get("TELEGRAM_TOKEN")
+API_URL = os.environ.get("API_URL", "http://127.0.0.1:5000/api/calculate")
 
-# === ШРИФТ С КИРИЛЛИЦЕЙ ===
-FONT_PATH = "fonts/DejaVuSans.ttf"
-pdfmetrics.registerFont(TTFont("DejaVu", FONT_PATH))
-
-# === КАЛЬКУЛЯТОР ===
-class PaintCalculator:
-
-    @staticmethod
-    def theoretical(p, area):
-        coverage = 1000 / (p['density'] * p['thickness'])
-        practical = (area / coverage) * 1.15
-        cost = practical * p['price']
-        return {
-            "consumption": round(practical, 3),
-            "coverage": round(coverage, 2),
-            "cost": round(cost, 2),
-            "cost_per_sqm": round(cost / area, 2)
-        }
-
-    @staticmethod
-    def practical(p, area):
-        cost = p['consumption'] * p['price']
-        coverage = area / p['consumption']
-        return {
-            "consumption": round(p['consumption'], 3),
-            "coverage": round(coverage, 2),
-            "cost": round(cost, 2),
-            "cost_per_sqm": round(cost / area, 2)
-        }
-
-    @staticmethod
-    def compare(p1, p2, area, mode):
-        r1 = PaintCalculator.theoretical(p1, area) if mode == "theoretical" else PaintCalculator.practical(p1, area)
-        r2 = PaintCalculator.theoretical(p2, area) if mode == "theoretical" else PaintCalculator.practical(p2, area)
-
-        cheaper = "paint1" if r1["cost"] < r2["cost"] else "paint2"
-
-        return {
-            "mode": mode,
-            "area": area,
-            "paint1": {**p1, **r1},
-            "paint2": {**p2, **r2},
-            "cheaper": cheaper
-        }
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/api/calculate", methods=["POST"])
-def calculate():
-    d = request.json
-    res = PaintCalculator.compare(
-        d["paint1"], d["paint2"],
-        d["area"], d["mode"]
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    kb = [["🎓 Теория", "🔧 Практика"]]
+    await update.message.reply_text(
+        "Калькулятор порошковой краски\nВыберите тип расчёта:",
+        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True)
     )
-    return jsonify(res)
 
-@app.route("/api/pdf", methods=["POST"])
-def pdf():
-    r = request.json
-    buf = BytesIO()
+async def theory(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Формат:\n"
+        "ПЛОЩАДЬ;ПЛОТНОСТЬ;ТОЛЩИНА;ЦЕНА\n\n"
+        "Пример:\n"
+        "12;1.4;80;450"
+    )
+    context.user_data["mode"] = "theoretical"
 
-    styles = getSampleStyleSheet()
-    styles["Normal"].fontName = "DejaVu"
-    styles["Title"].fontName = "DejaVu"
+async def practice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Формат:\n"
+        "ПЛОЩАДЬ;РАСХОД;ЦЕНА\n\n"
+        "Пример:\n"
+        "12;0.85;450"
+    )
+    context.user_data["mode"] = "practical"
 
-    doc = SimpleDocTemplate(buf, pagesize=A4)
-    elements = []
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.replace(",", ".")
+    if "mode" not in context.user_data:
+        return
 
-    elements.append(Paragraph("Отчет расчета порошковой краски", styles["Title"]))
-    elements.append(Paragraph(f"Тип расчета: {r['mode']}", styles["Normal"]))
-    elements.append(Paragraph(f"Площадь: {r['area']} м²", styles["Normal"]))
+    try:
+        parts = list(map(float, text.split(";")))
+        if context.user_data["mode"] == "theoretical":
+            area, density, thickness, price = parts
+            payload = {
+                "mode": "theoretical",
+                "area": area,
+                "paint1": {"name": "Краска", "density": density, "thickness": thickness, "price": price},
+                "paint2": {"name": "Краска", "density": density, "thickness": thickness, "price": price}
+            }
+        else:
+            area, cons, price = parts
+            payload = {
+                "mode": "practical",
+                "area": area,
+                "paint1": {"name": "Краска", "consumption": cons, "price": price},
+                "paint2": {"name": "Краска", "consumption": cons, "price": price}
+            }
 
-    table_data = [
-        ["Краска", "Расход кг", "Покрытие м²/кг", "Стоимость ₽", "Цена м² ₽"],
-        [
-            r["paint1"]["name"],
-            r["paint1"]["consumption"],
-            r["paint1"]["coverage"],
-            r["paint1"]["cost"],
-            r["paint1"]["cost_per_sqm"]
-        ],
-        [
-            r["paint2"]["name"],
-            r["paint2"]["consumption"],
-            r["paint2"]["coverage"],
-            r["paint2"]["cost"],
-            r["paint2"]["cost_per_sqm"]
-        ]
-    ]
+        r = requests.post(API_URL, json=payload).json()
+        p = r["paint1"]
 
-    table = Table(table_data)
-    table.setStyle(TableStyle([
-        ("GRID", (0,0), (-1,-1), 1, colors.grey),
-        ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-        ("FONT", (0,0), (-1,-1), "DejaVu")
-    ]))
+        await update.message.reply_text(
+            f"Результат:\n"
+            f"Расход: {p['consumption']} кг\n"
+            f"Покрытие: {p['coverage']} м²/кг\n"
+            f"Стоимость: {p['cost']} ₽\n"
+            f"Цена м²: {p['cost_per_sqm']} ₽"
+        )
 
-    elements.append(table)
-    elements.append(Paragraph(f"Выгодная краска: {r['cheaper']}", styles["Normal"]))
+    except Exception:
+        await update.message.reply_text("Ошибка формата. Попробуйте ещё раз.")
 
-    doc.build(elements)
-    buf.seek(0)
-
-    return send_file(buf, as_attachment=True, download_name="calculation.pdf", mimetype="application/pdf")
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("theory", theory))
+    app.add_handler(CommandHandler("practice", practice))
+    app.add_handler(CommandHandler("t", theory))
+    app.add_handler(CommandHandler("p", practice))
+    app.add_handler(CommandHandler("calc", handle))
+    app.add_handler(CommandHandler("go", handle))
+    app.run_polling()
 
 if __name__ == "__main__":
-    app.run()
+    main()
