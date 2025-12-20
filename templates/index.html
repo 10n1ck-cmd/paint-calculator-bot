@@ -2,241 +2,84 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<title>Калькулятор порошковой краски</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Калькулятор порошковых красок</title>
 
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 body{
-font-family:Segoe UI,Tahoma,sans-serif;
-background:linear-gradient(135deg,#667eea,#764ba2);
-min-height:100vh;padding:20px
+    font-family: Arial, sans-serif;
+    background:#f4f6f8;
+    margin:0;
+    padding:15px;
 }
-.container{max-width:1200px;margin:auto}
-.header{text-align:center;color:#fff;margin-bottom:25px}
-
+.container{
+    max-width:900px;
+    margin:auto;
+    background:#fff;
+    padding:20px;
+    border-radius:10px;
+}
+h1,h2{margin-top:0}
+label{display:block;margin-top:10px;font-weight:bold}
+input,select,button{
+    width:100%;
+    padding:10px;
+    margin-top:5px;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
+button{
+    background:#2d7ef7;
+    color:#fff;
+    font-size:16px;
+    cursor:pointer;
+}
+button:hover{background:#1f66d1}
 .block{
-background:#fff;border-radius:15px;
-padding:25px;margin-bottom:25px;
-box-shadow:0 10px 30px rgba(0,0,0,.2)
+    border:1px solid #e0e0e0;
+    padding:15px;
+    margin-top:15px;
+    border-radius:8px;
 }
-
-.toggle{
-display:flex;justify-content:center;gap:10px;margin-bottom:15px
-}
-.toggle button{
-padding:8px 16px;border-radius:20px;
-border:2px solid #667eea;
-background:#fff;color:#667eea;
-cursor:pointer
-}
-.toggle button.active{background:#667eea;color:#fff}
-
-.calc-types{
-display:grid;grid-template-columns:1fr 1fr;
-gap:15px;margin-bottom:20px
-}
-.calc-type-btn{
-border:3px solid #e0e0e0;
-border-radius:12px;padding:18px;
-cursor:pointer;text-align:center;font-size:1.05em
-}
-.calc-type-btn.active{
-background:#667eea;color:#fff;border-color:#667eea
-}
-
-.input-group{
-display:flex;gap:15px;flex-wrap:wrap;margin-bottom:15px
-}
-.input-field{flex:1;min-width:200px}
-label{font-weight:600;display:block;margin-bottom:5px}
-input{
-width:100%;padding:10px;
-border:2px solid #ddd;border-radius:6px
-}
-
-button.primary{
-background:#667eea;color:#fff;
-border:none;border-radius:8px;
-padding:14px 28px;
-font-size:1em;cursor:pointer
-}
-
-.results-grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-gap:20px
-}
-.card{
-background:#f8f9fa;
-border-radius:12px;
-padding:18px;border:2px solid #e9ecef
-}
-.value{font-size:22px;font-weight:700}
-.good{color:#2e7d32}
-.bad{color:#c62828}
-.tech{
-background:#eef2ff;border-left:4px solid #667eea;
-padding:10px;margin-top:10px;font-size:.9em
-}
-
-@media(max-width:768px){
-.calc-types{grid-template-columns:1fr}
-.toggle{flex-direction:column}
+.hidden{display:none}
+.result{
+    background:#f0f7ff;
+    padding:15px;
+    border-radius:8px;
+    margin-top:20px;
+    white-space:pre-wrap;
 }
 </style>
 </head>
 
 <body>
 <div class="container">
+<h1>🎨 Калькулятор порошковой краски</h1>
 
-<div class="header">
-<h1>🎨 Калькулятор порошковых красок</h1>
-<p>Сравнение и реальная экономия</p>
+<label>Тип расчёта</label>
+<select id="calcType" onchange="toggleCalc()">
+    <option value="theoretical">Теоретический</option>
+    <option value="practical">Практический</option>
+</select>
+
+<label>Площадь изделия (м²)</label>
+<input id="product_area" type="text" inputmode="decimal" placeholder="например 2,5">
+
+<!-- ТЕОРЕТИЧЕСКИЙ -->
+<div id="theoreticalBlock">
+<div class="block">
+<h2>Краска №1</h2>
+<input id="p1_name" placeholder="Название">
+<input id="p1_density" placeholder="Плотность г/см³">
+<input id="p1_thickness" placeholder="Толщина мкм">
+<input id="p1_price" placeholder="Цена руб/кг">
 </div>
 
 <div class="block">
-
-<div class="toggle">
-<button id="userBtn" class="active" onclick="setTechMode(false)">👤 Обычный режим</button>
-<button id="techBtn" onclick="setTechMode(true)">🧪 Режим технолога</button>
-</div>
-
-<div class="calc-types">
-<div class="calc-type-btn active" onclick="selectCalc(event,'theoretical')">🎓 Теоретический</div>
-<div class="calc-type-btn" onclick="selectCalc(event,'practical')">🔧 Практический</div>
-</div>
-
-<div class="input-group">
-<div class="input-field">
-<label>Площадь изделия (м²)</label>
-<input type="number" id="product_area" step="0.01">
-</div>
-<div class="input-field" id="lossBlock">
-<label>Потери (%)</label>
-<input type="number" id="loss_factor" value="15">
+<h2>Краска №2</h2>
+<input id="p2_name" placeholder="Название">
+<input id="p2_density" placeholder="Плотность г/см³">
+<input id="p2_thickness" placeholder="Толщина мкм">
+<input id="p2_price" placeholder="Цена руб/кг">
 </div>
 </div>
-
-<h3>🎨 Краска 1</h3>
-<div class="input-group" id="paint1_theory">
-<input class="input-field" id="p1_name" placeholder="Название">
-<input class="input-field" id="p1_density" placeholder="Плотность г/см³">
-<input class="input-field" id="p1_thickness" placeholder="Толщина мкм">
-<input class="input-field" id="p1_price" placeholder="Цена за кг">
-</div>
-
-<div class="input-group" id="paint1_practice" style="display:none">
-<input class="input-field" id="p1p_name" placeholder="Название">
-<input class="input-field" id="p1_real" placeholder="Расход кг">
-<input class="input-field" id="p1p_price" placeholder="Цена за кг">
-</div>
-
-<h3>🎨 Краска 2</h3>
-<div class="input-group" id="paint2_theory">
-<input class="input-field" id="p2_name" placeholder="Название">
-<input class="input-field" id="p2_density" placeholder="Плотность г/см³">
-<input class="input-field" id="p2_thickness" placeholder="Толщина мкм">
-<input class="input-field" id="p2_price" placeholder="Цена за кг">
-</div>
-
-<div class="input-group" id="paint2_practice" style="display:none">
-<input class="input-field" id="p2p_name" placeholder="Название">
-<input class="input-field" id="p2_real" placeholder="Расход кг">
-<input class="input-field" id="p2p_price" placeholder="Цена за кг">
-</div>
-
-<div style="text-align:center;margin-top:20px">
-<button class="primary" onclick="calculate()">Рассчитать</button>
-</div>
-</div>
-
-<div class="block" id="results" style="display:none">
-<h2>📊 Результаты</h2>
-<div class="results-grid" id="resultsGrid"></div>
-</div>
-
-</div>
-
-<script>
-let calcType='theoretical';
-let techMode=false;
-
-function setTechMode(v){
-techMode=v;
-userBtn.classList.toggle('active',!v);
-techBtn.classList.toggle('active',v);
-}
-
-function selectCalc(e,type){
-calcType=type;
-document.querySelectorAll('.calc-type-btn')
-.forEach(b=>b.classList.remove('active'));
-e.currentTarget.classList.add('active');
-
-paint1_theory.style.display=type==='theoretical'?'flex':'none';
-paint2_theory.style.display=type==='theoretical'?'flex':'none';
-paint1_practice.style.display=type==='practical'?'flex':'none';
-paint2_practice.style.display=type==='practical'?'flex':'none';
-lossBlock.style.display=type==='theoretical'?'block':'none';
-}
-
-async function calculate(){
-const area=parseFloat(product_area.value);
-if(!area||area<=0){alert('Введите площадь');return;}
-
-let payload={calc_type:calcType,product_area:area};
-
-if(calcType==='theoretical'){
-payload.loss_factor=parseFloat(loss_factor.value)/100;
-payload.paint1={
-name:p1_name.value,density:+p1_density.value,
-thickness:+p1_thickness.value,price:+p1_price.value
-};
-payload.paint2={
-name:p2_name.value,density:+p2_density.value,
-thickness:+p2_thickness.value,price:+p2_price.value
-};
-}else{
-payload.paint1={
-name:p1p_name.value,real_consumption:+p1_real.value,price:+p1p_price.value
-};
-payload.paint2={
-name:p2p_name.value,real_consumption:+p2_real.value,price:+p2p_price.value
-};
-}
-
-const res=await fetch('/api/calculate',{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify(payload)
-});
-const json=await res.json();
-if(!json.success){alert(json.error);return;}
-render(json.result);
-}
-
-function render(r){
-const d=r.comparison.difference;
-resultsGrid.innerHTML=`
-<div class="card">
-<h3>${r.paint1.name}</h3>
-<div class="value">${r.paint1.product_cost} ₽</div>
-${techMode?`<div class="tech">Расход: ${r.paint1.practical_consumption||r.paint1.real_consumption} кг</div>`:''}
-</div>
-<div class="card">
-<h3>${r.paint2.name}</h3>
-<div class="value">${r.paint2.product_cost} ₽</div>
-${techMode?`<div class="tech">Расход: ${r.paint2.practical_consumption||r.paint2.real_consumption} кг</div>`:''}
-</div>
-<div class="card">
-<h3>💰 Экономия</h3>
-<div class="value ${d>0?'good':'bad'}">${Math.abs(d)} ₽</div>
-<div class="value good">${r.comparison.cheaper_name}</div>
-</div>`;
-results.style.display='block';
-}
-</script>
-
-</body>
-</html>
