@@ -4,188 +4,83 @@
 <meta charset="UTF-8">
 <title>Калькулятор порошковой краски</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
 body{font-family:Arial;background:#f4f6f8;padding:15px}
 .container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px}
-label{font-weight:bold;margin-top:10px;display:block}
-input,select,button{width:100%;padding:10px;margin-top:5px;border-radius:6px;border:1px solid #ccc}
+input,select,button{width:100%;padding:10px;margin-top:5px}
 button{background:#2d7ef7;color:#fff;font-size:16px;margin-top:15px}
-.block{border:1px solid #ddd;padding:15px;border-radius:8px;margin-top:15px}
 .hidden{display:none}
 table{width:100%;border-collapse:collapse;margin-top:20px}
 th,td{border:1px solid #ccc;padding:8px;text-align:center}
-.good{background:#e6ffe6;font-weight:bold}
+.good{background:#e6ffe6}
 .bad{background:#ffecec}
-.actions{display:flex;gap:10px;margin-top:15px}
-.actions button{flex:1}
 </style>
 </head>
 
 <body>
 <div class="container">
-<h1>🎨 Калькулятор порошковой краски</h1>
+<h1>🎨 Калькулятор</h1>
 
-<label>Тип расчёта</label>
-<select id="calcType" onchange="toggleCalc()">
+<select id="calcType">
 <option value="theoretical">Теоретический</option>
 <option value="practical">Практический</option>
 </select>
 
-<label>Площадь изделия (м²)</label>
-<input id="product_area" inputmode="decimal" placeholder="2,5">
+<input id="product_area" placeholder="Площадь м²">
 
-<!-- ТЕОРЕТИЧЕСКИЙ -->
-<div id="theoretical">
-<div class="block">
-<h3>Краска №1</h3>
-<input id="p1_name" placeholder="Название">
-<input id="p1_density" placeholder="Плотность г/см³">
-<input id="p1_thickness" placeholder="Толщина мкм">
-<input id="p1_price" placeholder="Цена руб/кг">
-</div>
+<input id="p1_name" placeholder="Краска 1">
+<input id="p1_density" placeholder="Плотность / Расход">
+<input id="p1_thickness" placeholder="Толщина">
+<input id="p1_price" placeholder="Цена">
 
-<div class="block">
-<h3>Краска №2</h3>
-<input id="p2_name" placeholder="Название">
-<input id="p2_density" placeholder="Плотность г/см³">
-<input id="p2_thickness" placeholder="Толщина мкм">
-<input id="p2_price" placeholder="Цена руб/кг">
-</div>
-</div>
+<input id="p2_name" placeholder="Краска 2">
+<input id="p2_density" placeholder="Плотность / Расход">
+<input id="p2_thickness" placeholder="Толщина">
+<input id="p2_price" placeholder="Цена">
 
-<!-- ПРАКТИЧЕСКИЙ -->
-<div id="practical" class="hidden">
-<div class="block">
-<h3>Краска №1</h3>
-<input id="p1p_name" placeholder="Название">
-<input id="p1_real" placeholder="Фактический расход кг">
-<input id="p1p_price" placeholder="Цена руб/кг">
-</div>
+<button onclick="calc()">Рассчитать</button>
+<button onclick="pdf()">📄 Скачать PDF</button>
 
-<div class="block">
-<h3>Краска №2</h3>
-<input id="p2p_name" placeholder="Название">
-<input id="p2_real" placeholder="Фактический расход кг">
-<input id="p2p_price" placeholder="Цена руб/кг">
-</div>
-</div>
-
-<button onclick="calculate()">Рассчитать</button>
-
-<div id="out" class="hidden">
-<table>
-<thead id="tableHead"></thead>
-<tbody id="tableBody"></tbody>
-</table>
-
-<div class="actions">
-<button onclick="downloadPDF()">📄 PDF</button>
-<button onclick="downloadExcel()">📊 Excel</button>
-</div>
-</div>
-
+<pre id="out"></pre>
 </div>
 
 <script>
-function num(v){
-    return parseFloat(String(v).replace(',', '.')) || 0
+let last=null
+const num=v=>parseFloat(String(v).replace(',','.'))||0
+
+async function calc(){
+const d={
+calc_type:calcType.value,
+product_area:num(product_area.value),
+paint1:{
+name:p1_name.value,
+density:num(p1_density.value),
+thickness:num(p1_thickness.value),
+real_consumption:num(p1_density.value),
+price:num(p1_price.value)
+},
+paint2:{
+name:p2_name.value,
+density:num(p2_density.value),
+thickness:num(p2_thickness.value),
+real_consumption:num(p2_density.value),
+price:num(p2_price.value)
+}
+}
+const r=await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)})
+last=(await r.json()).result
+out.textContent=JSON.stringify(last,null,2)
 }
 
-function toggleCalc(){
-    theoretical.classList.toggle('hidden', calcType.value !== 'theoretical')
-    practical.classList.toggle('hidden', calcType.value !== 'practical')
-}
-
-async function calculate(){
-let payload = {
-    calc_type: calcType.value,
-    product_area: num(product_area.value)
-}
-if(payload.product_area <= 0){
-    alert('Введите площадь')
-    return
-}
-
-if(calcType.value === 'theoretical'){
-    payload.paint1 = {
-        name: p1_name.value,
-        density: num(p1_density.value),
-        thickness: num(p1_thickness.value),
-        price: num(p1_price.value)
-    }
-    payload.paint2 = {
-        name: p2_name.value,
-        density: num(p2_density.value),
-        thickness: num(p2_thickness.value),
-        price: num(p2_price.value)
-    }
-} else {
-    payload.paint1 = {
-        name: p1p_name.value,
-        real_consumption: num(p1_real.value),
-        price: num(p1p_price.value)
-    }
-    payload.paint2 = {
-        name: p2p_name.value,
-        real_consumption: num(p2_real.value),
-        price: num(p2p_price.value)
-    }
-}
-
-const r = await fetch('/api/calculate', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
-})
-const j = await r.json()
-if(!j.success){
-    alert(j.error)
-    return
-}
-
-render(j.result)
-}
-
-function render(r){
-out.classList.remove('hidden')
-tableBody.innerHTML = ''
-
-const isTheory = r.comparison.calculation_type === 'theoretical'
-const cheaper = r.comparison.cheaper_paint
-
-tableHead.innerHTML = `
-<tr>
-<th>Краска</th>
-<th>${isTheory ? 'Расход (расчёт)' : 'Факт. расход'} кг</th>
-<th>Покрытие м²/кг</th>
-<th>Стоимость ₽</th>
-<th>Цена м² ₽</th>
-</tr>
-`
-
-;['paint1','paint2'].forEach(k=>{
-    const p = r[k]
-    const tr = document.createElement('tr')
-    tr.className = k === cheaper ? 'good' : 'bad'
-
-    tr.innerHTML = `
-    <td>${p.name}</td>
-    <td>${(isTheory ? p.practical_consumption : p.real_consumption).toFixed(3)}</td>
-    <td>${p.coverage_area.toFixed(2)}</td>
-    <td>${p.product_cost.toFixed(2)}</td>
-    <td>${p.cost_per_sqm.toFixed(2)}</td>
-    `
-    tableBody.appendChild(tr)
-})
-}
-
-function downloadPDF(){
-    alert('PDF — следующий этап')
-}
-
-function downloadExcel(){
-    alert('Excel — следующий этап')
+async function pdf(){
+if(!last){alert('Сначала рассчитайте');return}
+const r=await fetch('/api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(last)})
+const b=await r.blob()
+const a=document.createElement('a')
+a.href=URL.createObjectURL(b)
+a.download='calculation.pdf'
+a.click()
 }
 </script>
-</body
+</body>
+</html>
