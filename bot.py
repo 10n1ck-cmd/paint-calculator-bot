@@ -1,139 +1,39 @@
-from flask import Flask, request, jsonify, render_template, send_file
-import os, time, requests
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
+import os
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-app = Flask(__name__)
+# ================== CONFIG ==================
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
+WEBAPP_URL = os.getenv("WEBAPP_URL")  # https://your-app.onrender.com
 
-# --- FONT ---
-pdfmetrics.registerFont(TTFont("DejaVu", "fonts/DejaVuSans.ttf"))
-
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
-
-# --- антиспам ---
-RATE = {}
-def limit(ip):
-    RATE.setdefault(ip, [])
-    RATE[ip] = RATE[ip][-10:]
-    RATE[ip].append(time.time())
-    return len(RATE[ip]) <= 10
-
-# --- расчёты ---
-def theory(area, d, t, price):
-    coverage = 1000 / (d * t)
-    cons = area / coverage * 1.15
-    cost = cons * price
-    return cons, coverage, cost
-
-def practice(area, cons, price):
-    coverage = area / cons
-    cost = cons * price
-    return cons, coverage, cost
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/api/calc", methods=["POST"])
-def calc():
-    if not limit(request.remote_addr):
-        return jsonify({"error": "limit"}), 429
-
-    d = request.json
-    results = []
-
-    for p in d["paints"]:
-        if d["mode"] == "theory":
-            c, cov, cost = theory(
-                d["area"], p["density"], p["thickness"], p["price"]
+# ================== /start ==================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            KeyboardButton(
+                text="🧮 Открыть калькулятор",
+                web_app=WebAppInfo(url=WEBAPP_URL)
             )
-        else:
-            c, cov, cost = practice(
-                d["area"], p["consumption"], p["price"]
-            )
+        ]
+    ]
 
-        results.append({
-            "name": p["name"],
-            "cost": round(cost, 2),
-            "consumption": round(c, 3),
-            "cost_per_sqm": round(cost / d["area"], 2)
-        })
-
-    cheaper = min(results, key=lambda x: x["cost"])
-    expensive = max(results, key=lambda x: x["cost"])
-    economy = round(
-        (expensive["cost"] - cheaper["cost"]) / expensive["cost"] * 100, 2
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard,
+        resize_keyboard=True
     )
 
-    return jsonify({
-        "mode": d["mode"],
-        "area": d["area"],
-        "results": results,
-        "cheaper": cheaper,
-        "expensive": expensive,
-        "economy": economy
-    })
-
-# --- PDF ---
-@app.route("/api/pdf", methods=["POST"])
-def pdf():
-    d = request.json
-    path = "/tmp/comparison.pdf"
-
-    doc = SimpleDocTemplate(path, pagesize=A4)
-    styles = getSampleStyleSheet()
-    styles["Normal"].fontName = "DejaVu"
-
-    s = []
-    s.append(Paragraph("<b>СРАВНЕНИЕ ДВУХ КРАСОК</b><br/><br/>", styles["Normal"]))
-    s.append(Paragraph(f"Площадь: {d['area']} м²<br/><br/>", styles["Normal"]))
-
-    for p in d["results"]:
-        s.append(Paragraph(
-            f"{p['name']}: {p['cost']} руб. ({p['cost_per_sqm']} руб./м²)",
-            styles["Normal"]
-        ))
-
-    s.append(Paragraph("<br/>", styles["Normal"]))
-    s.append(Paragraph(
-        f"<b>Выгоднее:</b> {d['cheaper']['name']}<br/>"
-        f"<b>Экономия:</b> {d['economy']} %",
-        styles["Normal"]
-    ))
-
-    doc.build(s)
-    return send_file(path, as_attachment=True, download_name="comparison.pdf")
-
-# --- заказ админу ---
-@app.route("/api/order", methods=["POST"])
-def order():
-    d = request.json
-    tg = d.get("tg_user")
-
-    text = (
-        "💼 ЗАПРОС НА ВЫГОДНОЕ ПРЕДЛОЖЕНИЕ\n\n"
-        f"👤 {tg['first_name'] if tg else 'Web'} "
-        f"(@{tg['username'] if tg and tg.get('username') else '-'})\n"
-        f"🆔 {tg['id'] if tg else '-'}\n\n"
-        f"📐 Площадь: {d['area']} м²\n"
-        f"🥇 Выгоднее: {d['cheaper']['name']}\n"
-        f"📉 Экономия: {d['economy']} %\n\n"
-        f"🧱 Поверхность: {d['surface']}\n"
-        f"🎨 Цвет: {d['color']}\n"
-        f"⚖️ Количество: {d['qty']} кг"
+    await update.message.reply_text(
+        "👋 Добро пожаловать!\n\n"
+        "Нажмите кнопку ниже, чтобы открыть калькулятор краски 👇",
+        reply_markup=reply_markup
     )
 
-    # ❗ ТОЛЬКО админу
-    requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-        json={
-            "chat_id": ADMIN_CHAT_ID,
-            "text": text
-        }
-    )
+# ================== MAIN ==================
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    print("🤖 Bot started")
+    app.run_polling()
 
-    return jsonify({"ok": True})
+if __name__ == "__main__":
+    main()
