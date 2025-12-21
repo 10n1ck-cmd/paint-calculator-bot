@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<title>Paint Calc</title>
+<title>Paint Calculator</title>
 
 <style>
 html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui}
@@ -23,39 +23,42 @@ button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
 <button onclick="show('practice')">🔧 Практика</button>
 
 <div id="theory" class="card hidden">
-<input id="ta" placeholder="Площадь">
+<input id="ta" placeholder="Площадь, м²">
 <input id="t1n" placeholder="Краска 1">
 <input id="t1d" placeholder="Плотность">
 <input id="t1t" placeholder="Толщина">
-<input id="t1p" placeholder="Цена">
+<input id="t1p" placeholder="Цена, руб/кг">
 <input id="t2n" placeholder="Краска 2">
 <input id="t2d" placeholder="Плотность">
 <input id="t2t" placeholder="Толщина">
-<input id="t2p" placeholder="Цена">
+<input id="t2p" placeholder="Цена, руб/кг">
 <button onclick="calc('theory')">Рассчитать</button>
 </div>
 
 <div id="practice" class="card hidden">
-<input id="pa" placeholder="Площадь">
+<input id="pa" placeholder="Площадь, м²">
 <input id="p1n" placeholder="Краска 1">
-<input id="p1c" placeholder="Расход">
-<input id="p1p" placeholder="Цена">
+<input id="p1c" placeholder="Расход, кг">
+<input id="p1p" placeholder="Цена, руб/кг">
 <input id="p2n" placeholder="Краска 2">
-<input id="p2c" placeholder="Расход">
-<input id="p2p" placeholder="Цена">
+<input id="p2c" placeholder="Расход, кг">
+<input id="p2p" placeholder="Цена, руб/кг">
 <button onclick="calc('practice')">Рассчитать</button>
 </div>
 
 <div id="out" class="card hidden"></div>
 
-<button id="pdfBtn" class="hidden" onclick="pdf()">📄 PDF</button>
-<button id="orderBtn" class="hidden" onclick="show('order')">🛒 Заказать</button>
+<button id="pdfBtn" class="hidden" onclick="downloadPdf()">📄 Скачать PDF</button>
+<button id="orderBtn" class="hidden" onclick="show('order')">
+🔥 Получить выгодное предложение
+</button>
 
 <div id="order" class="card hidden">
 <select id="surface">
 <option>Глянец</option>
 <option>Мат</option>
 <option>Шагрень</option>
+<option>Муар</option>
 </select>
 
 <select id="color">
@@ -65,8 +68,8 @@ button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
 <option>Другой</option>
 </select>
 
-<input id="qty" placeholder="Количество кг">
-<button onclick="order()">Отправить</button>
+<input id="qty" placeholder="Количество, кг">
+<button onclick="order()">Отправить запрос</button>
 </div>
 
 </div>
@@ -75,52 +78,73 @@ button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
 Telegram.WebApp.expand();
 let last;
 
-function v(id){return +document.getElementById(id).value.replace(',','.');}
+function v(id){
+    return parseFloat(document.getElementById(id).value.replace(',','.'));
+}
 
 function show(id){
-document.querySelectorAll('.card').forEach(e=>e.classList.add('hidden'));
-document.getElementById(id).classList.remove('hidden');
+    document.querySelectorAll('.card').forEach(e=>e.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
 }
 
 async function calc(mode){
-const d = mode=='theory'?{
-mode,area:v('ta'),
-paints:[
-{name:t1n.value,density:v('t1d'),thickness:v('t1t'),price:v('t1p')},
-{name:t2n.value,density:v('t2d'),thickness:v('t2t'),price:v('t2p')}
-]}:{
-mode,area:v('pa'),
-paints:[
-{name:p1n.value,consumption:v('p1c'),price:v('p1p')},
-{name:p2n.value,consumption:v('p2c'),price:v('p2p')}
-]};
+    const data = mode==='theory' ? {
+        mode, area:v('ta'),
+        paints:[
+            {name:t1n.value,density:v('t1d'),thickness:v('t1t'),price:v('t1p')},
+            {name:t2n.value,density:v('t2d'),thickness:v('t2t'),price:v('t2p')}
+        ]
+    } : {
+        mode, area:v('pa'),
+        paints:[
+            {name:p1n.value,consumption:v('p1c'),price:v('p1p')},
+            {name:p2n.value,consumption:v('p2c'),price:v('p2p')}
+        ]
+    };
 
-last = await fetch('/api/calc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>r.json());
+    last = await fetch('/api/calc',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+    }).then(r=>r.json());
 
-out.innerHTML = last.results.map(p=>`${p.name}: ${p.cost} ₽`).join('<br>')
-+ `<br><b>Экономия ${last.economy}%</b>`;
-out.classList.remove('hidden');
-pdfBtn.classList.remove('hidden');
-orderBtn.classList.remove('hidden');
+    out.innerHTML = last.results.map(p =>
+        `<b>${p.name}</b><br>
+         Стоимость: ${p.cost} руб.<br>
+         Цена м²: ${p.cost_per_sqm} руб./м²<br><br>`
+    ).join('') +
+    `<b>Экономия: ${last.economy} %</b>`;
+
+    out.classList.remove('hidden');
+    pdfBtn.classList.remove('hidden');
+    orderBtn.classList.remove('hidden');
 }
 
-function pdf(){
-fetch('/api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(last)})
-.then(r=>r.blob()).then(b=>{
-const a=document.createElement('a');
-a.href=URL.createObjectURL(b);a.download='calc.pdf';a.click();
-});
+function downloadPdf(){
+    fetch('/api/pdf',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(last)
+    }).then(r=>r.blob()).then(b=>{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(b);
+        a.download='comparison.pdf';
+        a.click();
+    });
 }
 
 function order(){
-fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-...last,
-surface:surface.value,
-color:color.value,
-qty:qty.value,
-paint:last.cheaper.name
-})});
-alert('Отправлено');
+    fetch('/api/order',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            ...last,
+            surface:surface.value,
+            color:color.value,
+            qty:qty.value
+        })
+    });
+    alert('Запрос отправлен менеджеру');
 }
 </script>
 </body>
