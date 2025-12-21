@@ -1,28 +1,30 @@
 from flask import Flask, request, jsonify, render_template, send_file
 import os, time, requests
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
 
 app = Flask(__name__)
 
-# --- fonts ---
-pdfmetrics.registerFont(TTFont("DejaVu", "fonts/DejaVuSans.ttf"))
-
+# === CONFIG ===
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 
-# --- антиспам ---
+# === PDF FONT ===
+pdfmetrics.registerFont(TTFont("DejaVu", "fonts/DejaVuSans.ttf"))
+
+# === антиспам ===
 RATE = {}
 def limit(ip):
     RATE.setdefault(ip, [])
-    RATE[ip] = RATE[ip][-10:]
+    RATE[ip] = RATE[ip][-15:]
     RATE[ip].append(time.time())
-    return len(RATE[ip]) <= 10
+    return len(RATE[ip]) <= 15
 
-# --- расчёты ---
+# === calculations ===
 def theory(area, d, t, price):
     coverage = 1000 / (d * t)
     cons = area / coverage * 1.15
@@ -70,76 +72,43 @@ def calc():
     )
 
     return jsonify({
-        "mode": d["mode"],
         "area": d["area"],
+        "mode": d["mode"],
         "results": results,
         "cheaper": cheaper,
-        "expensive": expensive,
         "economy": economy
     })
 
-# --- PDF ---
-def make_pdf(data):
-    path = "/tmp/comparison.pdf"
+# === PDF ===
+@app.route("/api/pdf", methods=["POST"])
+def pdf():
+    d = request.json
+    path = "/tmp/result.pdf"
+
     doc = SimpleDocTemplate(path, pagesize=A4)
     styles = getSampleStyleSheet()
     styles["Normal"].fontName = "DejaVu"
 
     s = []
     s.append(Paragraph("<b>СРАВНЕНИЕ ДВУХ КРАСОК</b><br/><br/>", styles["Normal"]))
-    s.append(Paragraph(f"Площадь: {data['area']} м²<br/><br/>", styles["Normal"]))
+    s.append(Paragraph(f"Площадь: {d['area']} м²<br/><br/>", styles["Normal"]))
 
-    for p in data["results"]:
+    for p in d["results"]:
         s.append(Paragraph(
-            f"{p['name']}: {p['cost']} руб. "
-            f"({p['cost_per_sqm']} руб./м²)",
+            f"{p['name']} — {p['cost']} руб ({p['cost_per_sqm']} руб/м²)",
             styles["Normal"]
         ))
 
     s.append(Paragraph("<br/>", styles["Normal"]))
     s.append(Paragraph(
-        f"<b>Выгоднее:</b> {data['cheaper']['name']}<br/>"
-        f"<b>Экономия:</b> {data['economy']} %",
+        f"<b>Выгоднее:</b> {d['cheaper']['name']}<br/>"
+        f"<b>Экономия:</b> {d['economy']} %",
         styles["Normal"]
     ))
 
     doc.build(s)
-    return path
+    return send_file(path, as_attachment=True, download_name="comparison.pdf")
 
-# --- заказ админу ---
+# === ORDER → ADMIN ONLY ===
 @app.route("/api/order", methods=["POST"])
-def order():
-    d = request.json
-    pdf_path = make_pdf(d)
-
-    tg = d.get("tg_user")
-
-    text = (
-        "💼 ЗАПРОС НА ВЫГОДНОЕ ПРЕДЛОЖЕНИЕ\n\n"
-        f"👤 {tg['first_name'] if tg else 'Web'} "
-        f"(@{tg['username'] if tg and tg.get('username') else '-'})\n"
-        f"🆔 {tg['id'] if tg else '-'}\n\n"
-        f"📐 Площадь: {d['area']} м²\n\n"
-        f"🥇 Выгоднее: {d['cheaper']['name']}\n"
-        f"🥈 Вторая: {d['expensive']['name']}\n"
-        f"📉 Экономия: {d['economy']} %\n\n"
-        f"🧱 Поверхность: {d['surface']}\n"
-        f"🎨 Цвет: {d['color']}\n"
-        f"⚖️ Количество: {d['qty']} кг"
-    )
-
-    # сообщение админу
-    requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-        json={"chat_id": ADMIN_CHAT_ID, "text": text}
-    )
-
-    # PDF админу
-    with open(pdf_path, "rb") as f:
-        requests.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument",
-            data={"chat_id": ADMIN_CHAT_ID},
-            files={"document": f}
-        )
-
-    return jsonify({"ok": True})
+def o
