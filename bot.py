@@ -1,68 +1,53 @@
 import os
 import time
-from telegram import (
-    Update,
-    KeyboardButton,
-    ReplyKeyboardMarkup,
-    WebAppInfo
-)
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    ContextTypes
-)
+import asyncio
+import requests
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# ================== CONFIG ==================
 BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL")
+PING_URL = f"{WEBAPP_URL}/ping"
 
-# антиспам лимиты
-START_COOLDOWN = 10  # секунд между /start
-user_last_start = {}  # user_id -> timestamp
+START_COOLDOWN = 10
+last_start = {}
 
-# ================== /start ==================
+async def autoping():
+    while True:
+        try:
+            requests.get(PING_URL, timeout=5)
+        except:
+            pass
+        await asyncio.sleep(300)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+    uid = update.effective_user.id
     now = time.time()
 
-    last_time = user_last_start.get(user_id, 0)
-    if now - last_time < START_COOLDOWN:
-        wait = int(START_COOLDOWN - (now - last_time))
-        await update.message.reply_text(
-            f"⏳ Подождите {wait} сек перед повторным запуском калькулятора."
-        )
+    if now - last_start.get(uid, 0) < START_COOLDOWN:
+        await update.message.reply_text("⏳ Подождите пару секунд…")
         return
 
-    user_last_start[user_id] = now
+    last_start[uid] = now
 
-    keyboard = [
-        [
-            KeyboardButton(
-                text="🧮 Открыть калькулятор",
-                web_app=WebAppInfo(url=WEBAPP_URL)
-            )
-        ]
-    ]
-
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard,
-        resize_keyboard=True
-    )
+    kb = [[
+        KeyboardButton(
+            "🧮 Открыть калькулятор",
+            web_app=WebAppInfo(url=WEBAPP_URL)
+        )
+    ]]
 
     await update.message.reply_text(
-        "🎨 *Калькулятор порошковой краски*\n\n"
-        "Нажмите кнопку ниже, чтобы рассчитать расход и стоимость 👇",
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
+        "🎨 Калькулятор порошковой краски\n\n"
+        "Откройте WebApp для расчёта 👇",
+        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True)
     )
 
-# ================== MAIN ==================
-def main():
+async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-
-    print("🤖 Bot with anti-spam started")
-    app.run_polling()
+    asyncio.create_task(autoping())
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
