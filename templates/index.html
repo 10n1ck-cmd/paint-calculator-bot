@@ -2,104 +2,29 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-
-<!-- ❌ ОТКЛЮЧАЕМ АВТОМАСШТАБ -->
-<meta name="viewport"
-content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Калькулятор краски</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-<title>Paint Calculator</title>
-
 <style>
-html,body{
- margin:0;
- height:100%;
- font-family:system-ui;
- -webkit-text-size-adjust:100%;
-}
-.wrapper{
- height:100%;
- overflow-y:auto;
- padding:12px;
- background:#f4f6f8;
-}
-.card{
- background:#fff;
- padding:12px;
- border-radius:12px;
- margin-bottom:10px;
-}
-input,select,button{
- width:100%;
- padding:10px;
- margin-top:6px;
- font-size:16px;
-}
-button{
- background:#2a9df4;
- color:#fff;
- border:0;
- border-radius:8px;
-}
-.hidden{display:none}
-
-.fixed{
- position:sticky;
- bottom:0;
- background:#f4f6f8;
- padding:8px 0;
-}
-
-.banner{
- font-size:13px;
- opacity:.7;
- text-align:center;
- margin-top:10px;
-}
+body{font-family:Arial;margin:0;padding:15px;background:#f7f7f7}
+input,select,button{width:100%;padding:10px;margin:6px 0;font-size:16px}
+button{background:#0088cc;color:#fff;border:none;border-radius:6px}
+.card{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px}
+.banner{font-size:13px;color:#666;text-align:center;margin-top:20px}
+.color{display:inline-block;width:30px;height:30px;border-radius:4px;margin:4px;border:1px solid #ccc}
 </style>
 </head>
 
 <body>
-<div class="wrapper">
-
-<button onclick="show('theory')">🎓 Теория</button>
-<button onclick="show('practice')">🔧 Практика</button>
-
-<div id="theory" class="card hidden">
-<input id="ta" placeholder="Площадь м²">
-<input id="t1n" placeholder="Краска 1">
-<input id="t1d" placeholder="Плотность">
-<input id="t1t" placeholder="Толщина">
-<input id="t1p" placeholder="Цена руб/кг">
-<input id="t2n" placeholder="Краска 2">
-<input id="t2d" placeholder="Плотность">
-<input id="t2t" placeholder="Толщина">
-<input id="t2p" placeholder="Цена руб/кг">
-<button onclick="calc('theory')">Рассчитать</button>
+<div class="card">
+<h3>📐 Площадь (м²)</h3>
+<input id="area" type="number" step="0.01">
 </div>
 
-<div id="practice" class="card hidden">
-<input id="pa" placeholder="Площадь м²">
-<input id="p1n" placeholder="Краска 1">
-<input id="p1c" placeholder="Расход кг">
-<input id="p1p" placeholder="Цена руб/кг">
-<input id="p2n" placeholder="Краска 2">
-<input id="p2c" placeholder="Расход кг">
-<input id="p2p" placeholder="Цена руб/кг">
-<button onclick="calc('practice')">Рассчитать</button>
-</div>
-
-<div id="out" class="card hidden"></div>
-
-<div class="fixed">
-<button id="pdfBtn" class="hidden" onclick="savePdf()">📄 Сохранить PDF</button>
-<button id="orderBtn" class="hidden" onclick="show('order')">
-🔥 Получить выгодное предложение
-</button>
-</div>
-
-<div id="order" class="card hidden">
+<div class="card">
+<h3>🧱 Тип поверхности</h3>
 <select id="surface">
 <option>Матовая</option>
 <option>Глянцевая</option>
@@ -107,95 +32,75 @@ button{
 <option>Шагрень</option>
 <option>Антик</option>
 </select>
+</div>
 
-<input id="color" placeholder="Цвет (RAL)">
-<input id="qty" placeholder="Количество кг">
-<button onclick="order()">Отправить</button>
+<div class="card">
+<h3>🎨 Цвет</h3>
+<div id="colors">
+<div class="color" style="background:#000" onclick="setColor('RAL 9005')"></div>
+<div class="color" style="background:#fff" onclick="setColor('RAL 9010')"></div>
+<div class="color" style="background:#ff00ff" onclick="setColor('Neon')"></div>
+</div>
+<input id="color" readonly>
+</div>
+
+<div class="card">
+<button onclick="calculate()">Рассчитать</button>
+<button onclick="savePDF()">Сохранить в PDF</button>
+<button onclick="order()">Получить выгодное предложение</button>
 </div>
 
 <div class="banner">
-Тут может быть ваша реклама. Обращайтесь: <b>@{{ADMIN}}</b>
-</div>
-
+Тут может быть ваша реклама<br>
+Обращайтесь: <b>@A_n1ck</b>
 </div>
 
 <script>
 const tg = Telegram.WebApp;
-const tgUser = tg.initDataUnsafe.user || null;
-let last;
+const user = tg.initDataUnsafe.user || {};
 
-function v(id){
- return parseFloat(
-  document.getElementById(id).value.replace(',','.')
- );
+let lastResult = null;
+
+function setColor(c){document.getElementById('color').value=c}
+
+function calculate(){
+    fetch('/api/calc',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            area:+area.value,
+            mode:'theory',
+            paints:[
+                {name:'Краска A',density:1.3,thickness:0.12,price:450},
+                {name:'Краска B',density:1.1,thickness:0.1,price:520}
+            ]
+        })
+    }).then(r=>r.json()).then(d=>lastResult=d)
 }
 
-function show(id){
- document.querySelectorAll('.card').forEach(
-  e=>e.classList.add('hidden')
- );
- document.getElementById(id).classList.remove('hidden');
-}
-
-async function calc(mode){
- const d = mode==='theory'?{
-  mode,area:v('ta'),
-  paints:[
-   {name:t1n.value,density:v('t1d'),thickness:v('t1t'),price:v('t1p')},
-   {name:t2n.value,density:v('t2d'),thickness:v('t2t'),price:v('t2p')}
-  ]
- }:{
-  mode,area:v('pa'),
-  paints:[
-   {name:p1n.value,consumption:v('p1c'),price:v('p1p')},
-   {name:p2n.value,consumption:v('p2c'),price:v('p2p')}
-  ]
- };
-
- last = await fetch('/api/calc',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify(d)
- }).then(r=>r.json());
-
- out.innerHTML =
-  last.results.map(
-   p=>`<b>${p.name}</b><br>${p.cost} руб`
-  ).join('<br>')+
-  `<br><br><b>Выгоднее:</b> ${last.cheaper.name}<br>
-   Экономия: ${last.economy}%`;
-
- out.classList.remove('hidden');
- pdfBtn.classList.remove('hidden');
- orderBtn.classList.remove('hidden');
-}
-
-function savePdf(){
- fetch('/api/pdf',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify(last)
- }).then(r=>r.blob()).then(b=>{
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(b);
-  a.download='comparison.pdf';
-  a.click();
- });
+function savePDF(){
+    fetch('/api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lastResult)})
+    .then(r=>r.blob()).then(b=>{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(b);
+        a.download='comparison.pdf';
+        a.click();
+    })
 }
 
 function order(){
- fetch('/api/order',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   ...last,
-   surface:surface.value,
-   color:color.value,
-   qty:qty.value,
-   tg_user:tgUser
-  })
- });
- alert('Заявка отправлена администратору');
+    fetch('/api/order',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            ...lastResult,
+            area:+area.value,
+            surface:surface.value,
+            color:color.value,
+            qty:10,
+            tg:user
+        })
+    })
 }
 </script>
 </body>
