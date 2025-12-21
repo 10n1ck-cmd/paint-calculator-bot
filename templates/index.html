@@ -2,79 +2,149 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Калькулятор краски</title>
+<meta name="viewport"
+ content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Калькулятор порошковой краски</title>
 
 <style>
-body { font-family: system-ui; margin:0; background:#f8fafc; }
-#splash {
-  position:fixed; inset:0; background:#0f172a; color:#fff;
-  display:flex; flex-direction:column; justify-content:center; align-items:center;
-  z-index:9999;
+body { font-family: system-ui; background:#f8fafc; margin:0; }
+.container { max-width:600px; margin:auto; padding:16px; }
+h2,h3 { margin-top:24px; }
+input,select,button {
+  width:100%; padding:10px; margin-top:8px; font-size:16px;
 }
-.container { padding:16px; max-width:600px; margin:auto; }
-button { width:100%; padding:12px; margin-top:12px; font-size:16px; }
-input, select { width:100%; padding:10px; margin-top:8px; }
+button { background:#2563eb; color:#fff; border:none; border-radius:6px; }
+.result { margin-top:16px; background:#e5e7eb; padding:12px; border-radius:6px; }
 .banner {
-  margin-top:24px; padding:12px; background:#e5e7eb; text-align:center;
+  margin-top:24px; padding:12px; background:#f1f5f9; text-align:center;
   font-size:14px;
 }
 </style>
 </head>
 
 <body>
+<div class="container">
 
-<div id="splash">
-  <div style="font-size:40px">🎨</div>
-  <div>Загружаем калькулятор…</div>
+<h2>🎓 Теоретический расчёт</h2>
+
+<label>Площадь, м²</label>
+<input id="area" type="number" step="0.001">
+
+<label>Плотность, г/см³</label>
+<input id="density" type="number" step="0.001">
+
+<label>Толщина слоя, мкм</label>
+<input id="thickness" type="number" step="1">
+
+<label>Потери, %</label>
+<input id="loss" type="number" step="1" value="15">
+
+<h3>Краска 1 — цена ₽/кг</h3>
+<input id="price1" type="number" step="0.01">
+
+<h3>Краска 2 — цена ₽/кг</h3>
+<input id="price2" type="number" step="0.01">
+
+<button onclick="calculate()">Рассчитать</button>
+
+<div id="output" class="result"></div>
+
+<h2>🛒 Получить выгодное предложение</h2>
+
+<label>Тип поверхности</label>
+<select id="surface">
+  <option>Матовая</option>
+  <option>Глянцевая</option>
+  <option>Муар</option>
+  <option>Шагрень</option>
+  <option>Антик</option>
+</select>
+
+<label>Цвет (RAL / название)</label>
+<input id="color">
+
+<label>Количество, кг</label>
+<input id="quantity" type="number" step="0.1">
+
+<button onclick="sendOrder()">Получить выгодное предложение</button>
+
+<div class="banner">
+Тут может быть ваша реклама<br>
+Обращайтесь: <b>@A_n1ck</b>
 </div>
 
-<div class="container">
-  <h2>Сравнение двух красок</h2>
-
-  <label>Площадь (м²)</label>
-  <input id="area" type="number" step="0.001">
-
-  <h3>Краска 1</h3>
-  <input id="p1_price" placeholder="Цена за кг">
-
-  <h3>Краска 2</h3>
-  <input id="p2_price" placeholder="Цена за кг">
-
-  <button onclick="calc()">Рассчитать</button>
-
-  <div id="result"></div>
-
-  <button onclick="order()">Получить выгодное предложение</button>
-
-  <div class="banner">
-    Тут может быть ваша реклама<br>
-    Обращайтесь: <b>@A_n1ck</b>
-  </div>
 </div>
 
 <script>
-window.onload = () => {
-  document.getElementById("splash").remove();
-};
-
 const tg = window.Telegram.WebApp;
+let lastCalc = null;
 
-function calc(){
-  document.getElementById("result").innerText =
-    "🏆 Выгоднее: Краска 1\n💰 Экономия: 18 %";
+function calculate() {
+  const S = parseFloat(area.value);
+  const rho = parseFloat(density.value);
+  const h = parseFloat(thickness.value);
+  const loss = parseFloat(loss.value) / 100;
+  const p1 = parseFloat(price1.value);
+  const p2 = parseFloat(price2.value);
+
+  if ([S,rho,h,p1,p2].some(isNaN)) {
+    alert("Заполните все поля");
+    return;
+  }
+
+  // q = ρ * h / 1000
+  const q = (rho * h) / 1000;
+
+  // Q = q * S * (1 + loss)
+  const Q = q * S * (1 + loss);
+
+  const C1 = Q * p1;
+  const C2 = Q * p2;
+
+  const cheaper = C1 < C2 ? "Краска 1" : "Краска 2";
+  const diff = Math.abs(C1 - C2);
+  const percent = (diff / Math.max(C1, C2) * 100).toFixed(1);
+
+  lastCalc = {
+    area: S,
+    density: rho,
+    thickness: h,
+    loss: loss*100,
+    consumption: Q.toFixed(3),
+    cost1: C1.toFixed(2),
+    cost2: C2.toFixed(2),
+    cheaper,
+    percent
+  };
+
+  output.innerHTML = `
+<b>Расход:</b> ${Q.toFixed(3)} кг<br>
+<b>Стоимость краски 1:</b> ${C1.toFixed(2)} ₽<br>
+<b>Стоимость краски 2:</b> ${C2.toFixed(2)} ₽<br>
+<b>Выгоднее:</b> ${cheaper}<br>
+<b>Экономия:</b> ${percent} %
+`;
 }
 
-function order(){
+function sendOrder() {
+  if (!lastCalc) {
+    alert("Сначала выполните расчёт");
+    return;
+  }
+
   fetch("/api/order", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({
       telegram: tg.initDataUnsafe.user,
-      calculation:{ area:2.5, cheaper:"Краска 1", percent:18 },
-      order:{ surface:"Матовая", color:"RAL 9010", quantity:25 }
+      calculation: lastCalc,
+      order: {
+        surface: surface.value,
+        color: color.value,
+        quantity: quantity.value
+      }
     })
-  }).then(r=>alert("Заявка отправлена"));
+  }).then(()=>alert("Заявка отправлена админу"));
 }
 </script>
 
