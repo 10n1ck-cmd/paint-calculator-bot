@@ -8,32 +8,33 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 app = Flask(__name__)
 
+# --- PDF FONT ---
 pdfmetrics.registerFont(TTFont("DejaVu", "fonts/DejaVuSans.ttf"))
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 
-# -------- антиспам ----------
+# --- антиспам ---
 RATE = {}
 def limit(ip):
     RATE.setdefault(ip, [])
     RATE[ip] = RATE[ip][-20:]
     RATE[ip].append(time.time())
-    return len(RATE[ip]) < 20
+    return len(RATE[ip]) <= 20
 
-# -------- расчёты ----------
+# --- расчёты ---
 def theory(area, d, t, price):
-    cov = 1000 / (d * t)
-    cons = area / cov * 1.15
-    cost = cons * price
-    return cons, cov, cost
+    coverage = 1000 / (d * t)
+    consumption = area / coverage * 1.15
+    cost = consumption * price
+    return consumption, coverage, cost
 
-def practice(area, cons, price):
-    cov = area / cons
-    cost = cons * price
-    return cons, cov, cost
+def practice(area, consumption, price):
+    coverage = area / consumption
+    cost = consumption * price
+    return consumption, coverage, cost
 
-# -------- routes ----------
+# --- routes ---
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -41,37 +42,44 @@ def index():
 @app.route("/api/calc", methods=["POST"])
 def calc():
     if not limit(request.remote_addr):
-        return jsonify({"error": "Лимит"}), 429
+        return jsonify({"error": "Лимит запросов"}), 429
 
     d = request.json
-    res = []
+    results = []
 
     for p in d["paints"]:
         if d["mode"] == "theory":
-            c, cov, cost = theory(d["area"], p["density"], p["thickness"], p["price"])
+            cons, cov, cost = theory(
+                d["area"], p["density"], p["thickness"], p["price"]
+            )
         else:
-            c, cov, cost = practice(d["area"], p["consumption"], p["price"])
+            cons, cov, cost = practice(
+                d["area"], p["consumption"], p["price"]
+            )
 
-        res.append({
+        results.append({
             "name": p["name"],
             "cost": round(cost, 2),
             "coverage": round(cov, 2),
-            "consumption": round(c, 3),
-            "sqm": round(cost / d["area"], 2)
+            "consumption": round(cons, 3),
+            "cost_per_sqm": round(cost / d["area"], 2)
         })
 
-    cheap = min(res, key=lambda x: x["cost"])
-    exp = max(res, key=lambda x: x["cost"])
-    diff = round((exp["cost"] - cheap["cost"]) / exp["cost"] * 100, 2)
+    cheaper = min(results, key=lambda x: x["cost"])
+    expensive = max(results, key=lambda x: x["cost"])
+    economy = round(
+        (expensive["cost"] - cheaper["cost"]) / expensive["cost"] * 100, 2
+    )
 
     return jsonify({
-        "results": res,
-        "cheaper": cheap,
-        "economy": diff,
         "mode": d["mode"],
-        "area": d["area"]
+        "area": d["area"],
+        "results": results,
+        "cheaper": cheaper,
+        "economy": economy
     })
 
+# --- PDF ---
 @app.route("/api/pdf", methods=["POST"])
 def pdf():
     d = request.json
@@ -80,42 +88,49 @@ def pdf():
     doc = SimpleDocTemplate(path, pagesize=A4)
     styles = getSampleStyleSheet()
     styles["Normal"].fontName = "DejaVu"
-    content = []
 
-    content.append(Paragraph("<b>СРАВНЕНИЕ ДВУХ КРАСОК</b>", styles["Normal"]))
-    content.append(Paragraph(f"Площадь: {d['area']} м²", styles["Normal"]))
+    story = []
+    story.append(Paragraph("<b>СРАВНЕНИЕ ДВУХ КРАСОК</b>", styles["Normal"]))
+    story.append(Paragraph(f"Площадь: {d['area']} м²", styles["Normal"]))
+    story.append(Paragraph("<br/>", styles["Normal"]))
 
     for p in d["results"]:
-        content.append(Paragraph(
-            f"{p['name']} — {p['cost']} ₽ ({p['sqm']} ₽/м²)",
+        story.append(Paragraph(
+            f"{p['name']}: {p['cost']} руб. "
+            f"({p['cost_per_sqm']} руб./м²)",
             styles["Normal"]
         ))
 
-    content.append(Paragraph(
+    story.append(Paragraph("<br/>", styles["Normal"]))
+    story.append(Paragraph(
         f"<b>Выгоднее:</b> {d['cheaper']['name']}<br/>"
-        f"<b>Экономия:</b> {d['economy']}%",
+        f"<b>Экономия:</b> {d['economy']} %",
         styles["Normal"]
     ))
 
-    doc.build(content)
-    return send_file(path, as_attachment=True)
+    doc.build(story)
+    return send_file(path, as_attachment=True, download_name="comparison.pdf")
 
+# --- заказ админу ---
 @app.route("/api/order", methods=["POST"])
 def order():
     d = request.json
+
     if TELEGRAM_TOKEN and ADMIN_CHAT_ID:
         text = (
-            "🛒 ЗАКАЗ ИЗ WEBAPP\n\n"
+            "💼 ЗАПРОС НА ВЫГОДНОЕ ПРЕДЛОЖЕНИЕ\n\n"
             f"Тип расчёта: {d['mode']}\n"
-            f"Площадь: {d['area']} м²\n"
-            f"Краска: {d['paint']}\n"
-            f"Экономия: {d['economy']}%\n\n"
-            f"Поверхность: {d['surface']}\n"
+            f"Площадь: {d['area']} м²\n\n"
+            f"Рекомендованная краска: {d['cheaper']['name']}\n"
+            f"Экономия: {d['economy']} %\n\n"
+            f"Тип поверхности: {d['surface']}\n"
             f"Цвет: {d['color']}\n"
-            f"Количество: {d['qty']} кг"
+            f"Количество: {d['qty']} кг\n"
         )
+
         requests.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
             json={"chat_id": ADMIN_CHAT_ID, "text": text}
         )
-    return jsonify({"ok": True})
+
+    return jsonify({"success": True})
