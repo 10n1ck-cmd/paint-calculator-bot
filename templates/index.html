@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<title>Paint Calc</title>
+<title>Paint Calculator</title>
 
 <style>
 html,body{margin:0;height:100%;font-family:system-ui}
@@ -12,13 +12,36 @@ html,body{margin:0;height:100%;font-family:system-ui}
 .card{background:#fff;padding:12px;border-radius:12px;margin-bottom:10px}
 input,select,button{width:100%;padding:10px;margin-top:6px}
 button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
-.fixed{
-    position:sticky;
-    bottom:0;
-    background:#f4f6f8;
-    padding:10px 0;
-}
 .hidden{display:none}
+
+/* фиксированная зона кнопок */
+.fixed{
+ position:sticky;
+ bottom:0;
+ background:#f4f6f8;
+ padding:8px 0;
+}
+
+/* каталог цветов */
+.colors{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:6px;
+ margin-top:6px;
+}
+.color{
+ height:40px;
+ border-radius:6px;
+ border:1px solid #ccc;
+}
+
+/* баннер */
+.banner{
+ font-size:13px;
+ opacity:.7;
+ text-align:center;
+ margin-top:10px;
+}
 </style>
 </head>
 
@@ -55,6 +78,7 @@ button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
 <div id="out" class="card hidden"></div>
 
 <div class="fixed">
+<button id="pdfBtn" class="hidden" onclick="savePdf()">📄 Сохранить PDF</button>
 <button id="orderBtn" class="hidden" onclick="show('order')">
 🔥 Получить выгодное предложение
 </button>
@@ -62,13 +86,24 @@ button{background:#2a9df4;color:#fff;border:0;border-radius:8px}
 
 <div id="order" class="card hidden">
 <select id="surface">
-<option>Мат</option><option>Глянец</option>
+<option>Мат</option>
+<option>Глянец</option>
 </select>
-<select id="color">
-<option>RAL 9005</option><option>RAL 9016</option>
-</select>
+
+<div class="colors">
+<div class="color" style="background:#000" onclick="pick('RAL 9005')"></div>
+<div class="color" style="background:#fff" onclick="pick('RAL 9016')"></div>
+<div class="color" style="background:#444" onclick="pick('RAL 7024')"></div>
+<div class="color" style="background:#777" onclick="pick('RAL 7040')"></div>
+</div>
+
+<input id="color" placeholder="Цвет">
 <input id="qty" placeholder="Количество кг">
 <button onclick="order()">Отправить</button>
+</div>
+
+<div class="banner">
+💡 Подбор материалов и расчёт — бесплатно. Производство и поставка под заказ.
 </div>
 
 </div>
@@ -107,12 +142,28 @@ async function calc(mode){
  }).then(r=>r.json());
 
  out.innerHTML =
-  last.results.map(p=>`<b>${p.name}</b><br>${p.cost} руб.<br>`).join('<br>')+
-  `<br><b>Выгоднее:</b> ${last.cheaper.name}<br>Экономия: ${last.economy}%`;
+  last.results.map(p=>`<b>${p.name}</b><br>${p.cost} руб.`).join('<br>')+
+  `<br><br><b>Выгоднее:</b> ${last.cheaper.name}<br>Экономия: ${last.economy}%`;
 
  out.classList.remove('hidden');
+ pdfBtn.classList.remove('hidden');
  orderBtn.classList.remove('hidden');
 }
+
+function savePdf(){
+ fetch('/api/pdf',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify(last)
+ }).then(r=>r.blob()).then(b=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download='comparison.pdf';
+  a.click();
+ });
+}
+
+function pick(c){color.value=c;}
 
 function order(){
  fetch('/api/order',{
@@ -126,7 +177,7 @@ function order(){
    tg_user:tgUser
   })
  });
- alert('Отправлено менеджеру');
+ alert('Запрос отправлен менеджеру');
 }
 </script>
 </body>
