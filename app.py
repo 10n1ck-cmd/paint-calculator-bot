@@ -10,9 +10,8 @@ app = Flask(__name__)
 
 BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
-
-ORDER_LIMIT = 600
-last_order = {}
+LIMIT = 600
+last = {}
 
 pdfmetrics.registerFont(TTFont("DejaVu", "fonts/DejaVuSans.ttf"))
 
@@ -24,54 +23,34 @@ def index():
 def ping():
     return "ok"
 
-def make_pdf(calc, path):
-    styles = getSampleStyleSheet()
-    styles["Normal"].fontName = "DejaVu"
-
+def pdf(data, path):
+    s = getSampleStyleSheet()
+    s["Normal"].fontName = "DejaVu"
     doc = SimpleDocTemplate(path)
+    r = data["result"]
     story = [
-        Paragraph("<b>Сравнение порошковых красок</b>", styles["Normal"]),
-        Paragraph(f"Площадь: {calc['area']} м²", styles["Normal"]),
-        Paragraph(f"Расход: {calc['consumption']} кг", styles["Normal"]),
-        Paragraph(f"Выгоднее: <b>{calc['cheaper']}</b>", styles["Normal"]),
-        Paragraph(f"Экономия: {calc['percent']} %", styles["Normal"]),
-        Paragraph("<br/>Тут может быть ваша реклама<br/>@A_n1ck", styles["Normal"])
+        Paragraph("<b>Сравнение порошковых красок</b>", s["Normal"]),
+        Paragraph(f"Теория: {r['theory']}", s["Normal"]),
+        Paragraph(f"Практика: {r.get('practice','—')}", s["Normal"]),
+        Paragraph(f"Выгоднее: {r['summary']['cheaper']}", s["Normal"]),
+        Paragraph(f"Экономия: {r['summary']['percent']} %", s["Normal"]),
+        Paragraph("<br/>@A_n1ck", s["Normal"])
     ]
     doc.build(story)
 
 @app.route("/api/order", methods=["POST"])
 def order():
     data = request.json
-    user = data["telegram"]
-    uid = user["id"]
-    now = time.time()
+    uid = data["telegram"]["id"]
+    if time.time() - last.get(uid,0) < LIMIT:
+        return jsonify({"err":"spam"}),429
+    last[uid]=time.time()
 
-    if now - last_order.get(uid, 0) < ORDER_LIMIT:
-        return jsonify({"error":"too fast"}), 429
-
-    last_order[uid] = now
-
-    calc = data["calculation"]
-    ord = data["order"]
-
-    pdf_path = f"/tmp/{uid}.pdf"
-    make_pdf(calc, pdf_path)
-
-    text = (
-        "🧾 ЗАЯВКА С WEBAPP\n\n"
-        f"👤 {user.get('first_name','')} @{user.get('username','')}\n"
-        f"🆔 {uid}\n\n"
-        f"📐 Площадь: {calc['area']} м²\n"
-        f"⚖️ Расход: {calc['consumption']} кг\n"
-        f"🏆 Выгоднее: {calc['cheaper']}\n"
-        f"💰 Экономия: {calc['percent']} %\n\n"
-        f"🎨 Поверхность: {ord['surface']}\n"
-        f"🌈 Цвет: {ord['color']}\n"
-        f"📦 Кол-во: {ord['quantity']} кг"
-    )
+    path = f"/tmp/{uid}.pdf"
+    pdf(data, path)
 
     bot = Bot(BOT_TOKEN)
-    bot.send_message(ADMIN_CHAT_ID, text)
-    bot.send_document(ADMIN_CHAT_ID, open(pdf_path, "rb"))
+    bot.send_message(ADMIN_CHAT_ID, str(data))
+    bot.send_document(ADMIN_CHAT_ID, open(path,"rb"))
 
     return jsonify({"ok":True})
