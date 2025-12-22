@@ -2,131 +2,134 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Калькулятор порошковых красок</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор краски</title>
 <style>
-body { font-family: Arial, sans-serif; margin: 0; padding: 14px; background:#fafafa; }
-button { width:100%; padding:14px; margin:8px 0; font-size:16px; }
-input, select { width:100%; padding:8px; margin:4px 0; font-size:15px; }
-.card { background:#fff; padding:12px; margin-bottom:12px; border-radius:6px; }
-.hidden { display:none; }
-.result { background:#eef3ff; padding:10px; border-radius:6px; }
-.banner { margin-top:20px; font-size:14px; text-align:center; color:#555; }
+body { font-family: Arial, sans-serif; padding: 20px; }
+.tab { display: none; }
+.tab.active { display: block; }
+button { padding: 10px 15px; margin: 5px; }
+input { margin: 5px 0; padding: 5px; width: 100%; }
+.banner { background: #eee; padding: 10px; margin-top: 20px; text-align:center; font-size:0.9em;}
+.result { background: #f9f9f9; padding: 10px; margin-top: 10px; border: 1px solid #ccc; }
 </style>
 </head>
-
 <body>
 
-<!-- ГЛАВНЫЙ ЭКРАН -->
-<div id="home">
-  <button onclick="openCalc('theory')">📐 Теоретический расчёт</button>
-  <button onclick="openCalc('practice')">🧪 Практический расчёт</button>
+<h2>Калькулятор порошковых красок</h2>
+
+<div>
+    <button onclick="showTab('theory')">Теоретический расчет</button>
+    <button onclick="showTab('practice')">Практический расчет</button>
 </div>
 
-<!-- ЭКРАН РАСЧЁТА -->
-<div id="calc" class="hidden">
-  <button onclick="back()">← Назад</button>
-  <h3 id="title"></h3>
-
-  <div class="card">
-    <h4>Краска 1</h4>
-    <input id="a1" placeholder="Площадь / Расход (кг)">
-    <input id="b1" placeholder="Плотность / Площадь (м²)">
-    <input id="c1" placeholder="Толщина (мкм) / Цена (₽/кг)">
-    <input id="d1" placeholder="Цена (₽/кг)">
-    <input id="loss1" placeholder="Потери (%) — только теория">
-  </div>
-
-  <div class="card">
-    <h4>Краска 2</h4>
-    <input id="a2">
-    <input id="b2">
-    <input id="c2">
-    <input id="d2">
-    <input id="loss2">
-  </div>
-
-  <button onclick="calculate()">Рассчитать</button>
-
-  <div id="result" class="result hidden"></div>
-
-  <button id="orderBtn" class="hidden" onclick="sendOrder()">
-    Получить выгодное предложение
-  </button>
+<!-- Теоретический -->
+<div id="theory" class="tab">
+    <h3>Теоретический расчет</h3>
+    <input id="area_theory" type="number" step="0.001" placeholder="Площадь (м²)">
+    <input id="density1" type="number" step="0.001" placeholder="Плотность краски 1 (г/см³)">
+    <input id="thickness1" type="number" step="0.1" placeholder="Толщина краски 1 (мкм)">
+    <input id="price1" type="number" step="0.01" placeholder="Цена краски 1 (₽)">
+    <input id="density2" type="number" step="0.001" placeholder="Плотность краски 2 (г/см³)">
+    <input id="thickness2" type="number" step="0.1" placeholder="Толщина краски 2 (мкм)">
+    <input id="price2" type="number" step="0.01" placeholder="Цена краски 2 (₽)">
+    <button onclick="calculate('theory')">Рассчитать</button>
 </div>
+
+<!-- Практический -->
+<div id="practice" class="tab">
+    <h3>Практический расчет</h3>
+    <input id="area_practice" type="number" step="0.001" placeholder="Площадь (м²)">
+    <input id="cons1" type="number" step="0.001" placeholder="Расход краски 1 (кг)">
+    <input id="pricep1" type="number" step="0.01" placeholder="Цена краски 1 (₽)">
+    <input id="cons2" type="number" step="0.001" placeholder="Расход краски 2 (кг)">
+    <input id="pricep2" type="number" step="0.01" placeholder="Цена краски 2 (₽)">
+    <button onclick="calculate('practice')">Рассчитать</button>
+</div>
+
+<div class="result" id="result"></div>
 
 <div class="banner">
-  Тут может быть ваша реклама<br>
-  <a href="https://t.me/A_n1ck" target="_blank">@A_n1ck</a>
+    🔔 Тут может быть ваша реклама. Обращайтесь: <a href="https://t.me/A_n1ck" target="_blank">@A_n1ck</a>
 </div>
 
 <script>
-let mode = null;
-let calcData = null;
-const tg = window.Telegram?.WebApp;
-
-function v(id){
-  return parseFloat(document.getElementById(id).value.replace(",", "."));
+function showTab(id){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('result').innerHTML = '';
 }
 
-function openCalc(m){
-  mode = m;
-  document.getElementById("home").classList.add("hidden");
-  document.getElementById("calc").classList.remove("hidden");
-  document.getElementById("title").innerText =
-    m === "theory" ? "Теоретический расчёт" : "Практический расчёт";
-}
+function calculate(mode){
+    let calc = {};
+    if(mode=='theory'){
+        const area = parseFloat(document.getElementById('area_theory').value);
+        const d1 = parseFloat(document.getElementById('density1').value);
+        const t1 = parseFloat(document.getElementById('thickness1').value);
+        const p1 = parseFloat(document.getElementById('price1').value);
+        const d2 = parseFloat(document.getElementById('density2').value);
+        const t2 = parseFloat(document.getElementById('thickness2').value);
+        const p2 = parseFloat(document.getElementById('price2').value);
 
-function back(){
-  document.getElementById("calc").classList.add("hidden");
-  document.getElementById("home").classList.remove("hidden");
-}
+        const coverage1 = 1000/(d1*t1);
+        const coverage2 = 1000/(d2*t2);
+        const kgm1 = area/coverage1*1.15; // 15% потери
+        const kgm2 = area/coverage2*1.15;
+        const r1 = kgm1*p1;
+        const r2 = kgm2*p2;
+        const cheaper = r1<r2?'Краска 1':'Краска 2';
+        const economyRub = Math.abs(r1-r2)/area;
+        const economyPct = Math.round(Math.abs(r1-r2)/Math.min(r1,r2)*100);
 
-function calculate(){
-  let r1, r2, kgm1, kgm2;
+        calc = {mode, kgm1, kgm2, r1, r2, cheaper, economyRub, economyPct};
+    } else {
+        const area = parseFloat(document.getElementById('area_practice').value);
+        const c1 = parseFloat(document.getElementById('cons1').value);
+        const c2 = parseFloat(document.getElementById('cons2').value);
+        const p1 = parseFloat(document.getElementById('pricep1').value);
+        const p2 = parseFloat(document.getElementById('pricep2').value);
 
-  if(mode === "theory"){
-    kgm1 = (v("b1") * v("c1") * (1 + v("loss1")/100)) / 1000;
-    kgm2 = (v("b2") * v("c2") * (1 + v("loss2")/100)) / 1000;
-  } else {
-    kgm1 = v("a1") / v("b1");
-    kgm2 = v("a2") / v("b2");
-  }
+        const kgm1 = c1/area;
+        const kgm2 = c2/area;
+        const r1 = c1*p1/area;
+        const r2 = c2*p2/area;
+        const cheaper = r1<r2?'Краска 1':'Краска 2';
+        const economyRub = Math.abs(r1-r2);
+        const economyPct = Math.round(Math.abs(r1-r2)/Math.min(r1,r2)*100);
 
-  r1 = kgm1 * v("d1");
-  r2 = kgm2 * v("d2");
+        calc = {mode, kgm1, kgm2, r1, r2, cheaper, economyRub, economyPct};
+    }
 
-  const cheaper = r1 < r2 ? "Краска 1" : "Краска 2";
-  const economyRub = Math.abs(r1 - r2);
-  const economyPct = Math.round((economyRub / Math.max(r1, r2)) * 1000) / 10;
+    document.getElementById('result').innerHTML = `
+        <b>Результаты:</b><br>
+        Краска 1: ${calc.kgm1.toFixed(3)} кг/м², ${calc.r1.toFixed(2)} ₽/м²<br>
+        Краска 2: ${calc.kgm2.toFixed(3)} кг/м², ${calc.r2.toFixed(2)} ₽/м²<br>
+        Выгоднее: ${calc.cheaper}<br>
+        Экономия: ${calc.economyRub.toFixed(2)} ₽/м² (${calc.economyPct}%)<br>
+        <button onclick="sendOrder()">Получить выгодное предложение + PDF</button>
+    `;
 
-  calcData = { kgm1, kgm2, r1, r2, cheaper, economyRub, economyPct, mode };
-
-  document.getElementById("result").innerHTML = `
-    <b>Результат:</b><br>
-    Краска 1: ${kgm1.toFixed(3)} кг/м² · ${r1.toFixed(2)} ₽/м²<br>
-    Краска 2: ${kgm2.toFixed(3)} кг/м² · ${r2.toFixed(2)} ₽/м²<br><br>
-    <b>Выгоднее:</b> ${cheaper}<br>
-    Экономия: ${economyRub.toFixed(2)} ₽/м² (${economyPct}%)
-  `;
-
-  document.getElementById("result").classList.remove("hidden");
-  document.getElementById("orderBtn").classList.remove("hidden");
+    window.calcData = calc;
 }
 
 function sendOrder(){
-  fetch("/api/order",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      calc: calcData,
-      user: tg?.initDataUnsafe?.user || null
-    })
-  });
-  alert("Заявка отправлена администратору");
+    const user = {id: Math.floor(Math.random()*1000000)};
+    fetch('/api/order',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({calc: window.calcData, user})
+    }).then(r=>r.blob()).then(blob=>{
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'calc.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }).catch(e=>alert('Ошибка: '+e));
 }
+
+showTab('theory'); // по умолчанию
 </script>
 
 </body>
