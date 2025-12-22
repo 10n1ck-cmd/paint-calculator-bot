@@ -8,63 +8,29 @@
 <title>Калькулятор порошковой краски</title>
 
 <style>
-body {
-  font-family: system-ui, -apple-system;
-  background:#f8fafc;
-  margin:0;
-}
-.container {
-  max-width:720px;
-  margin:auto;
-  padding:12px;
-}
-.tabs {
-  display:flex;
-  gap:6px;
-  margin-bottom:12px;
-}
+body { font-family: system-ui; background:#f8fafc; margin:0; }
+.container { max-width:720px; margin:auto; padding:12px; }
+.tabs { display:flex; gap:6px; margin-bottom:12px; }
 .tab-btn {
-  flex:1;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  background:#e5e7eb;
-  font-size:14px;
+  flex:1; padding:10px; border:none; border-radius:8px;
+  background:#e5e7eb; font-size:14px;
 }
-.tab-btn.active {
-  background:#2563eb;
-  color:white;
-}
-.tab {
-  display:none;
-}
-.tab.active {
-  display:block;
-}
+.tab-btn.active { background:#2563eb; color:white; }
+.tab { display:none; }
+.tab.active { display:block; }
+
 input, select, button {
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  font-size:16px;
+  width:100%; padding:10px; margin-top:8px; font-size:16px;
 }
 button {
-  background:#2563eb;
-  color:white;
-  border:none;
-  border-radius:8px;
+  background:#2563eb; color:white; border:none; border-radius:8px;
 }
 .block {
-  background:#e5e7eb;
-  padding:12px;
-  border-radius:8px;
-  margin-top:12px;
+  background:#e5e7eb; padding:12px; border-radius:8px; margin-top:12px;
 }
 .banner {
-  margin-top:24px;
-  padding:12px;
-  background:#f1f5f9;
-  text-align:center;
-  font-size:14px;
+  margin-top:24px; padding:12px; background:#f1f5f9;
+  text-align:center; font-size:14px;
 }
 h3 { margin-top:16px; }
 </style>
@@ -83,33 +49,38 @@ h3 { margin-top:16px; }
 
 <!-- ТЕОРИЯ -->
 <div class="tab active">
-  <h3>Площадь</h3>
-  <input id="area" type="number" step="0.001" placeholder="м²">
-  <input id="loss" type="number" value="15" placeholder="Потери %">
+  <input id="area" placeholder="Площадь, м²" type="number" step="0.001">
+  <input id="loss" placeholder="Потери %" type="number">
 
   <h3>Краска 1</h3>
   <input id="d1" placeholder="Плотность г/см³" type="number" step="0.001">
   <input id="t1" placeholder="Толщина мкм" type="number">
-  <input id="p1" placeholder="Цена ₽/кг" type="number" step="0.01">
+  <input id="tp1" placeholder="Цена ₽/кг" type="number" step="0.01">
 
   <h3>Краска 2</h3>
   <input id="d2" placeholder="Плотность г/см³" type="number" step="0.001">
   <input id="t2" placeholder="Толщина мкм" type="number">
-  <input id="p2" placeholder="Цена ₽/кг" type="number" step="0.01">
+  <input id="tp2" placeholder="Цена ₽/кг" type="number" step="0.01">
 
-  <button onclick="calc()">Рассчитать</button>
+  <button onclick="calcTheory()">Рассчитать теорию</button>
 </div>
 
 <!-- ПРАКТИКА -->
 <div class="tab">
-  <h3>Фактический расход</h3>
-  <input id="q1" placeholder="Краска 1, кг" type="number" step="0.001">
-  <input id="q2" placeholder="Краска 2, кг" type="number" step="0.001">
+  <h3>Краска 1</h3>
+  <input id="q1" placeholder="Факт. расход, кг" type="number" step="0.001">
+  <input id="pp1" placeholder="Цена ₽/кг" type="number" step="0.01">
+
+  <h3>Краска 2</h3>
+  <input id="q2" placeholder="Факт. расход, кг" type="number" step="0.001">
+  <input id="pp2" placeholder="Цена ₽/кг" type="number" step="0.01">
+
+  <button onclick="calcPractice()">Рассчитать практику</button>
 </div>
 
 <!-- РЕЗУЛЬТАТ -->
 <div class="tab">
-  <div id="result" class="block">Рассчитайте данные</div>
+  <div id="result" class="block">Нет расчётов</div>
 </div>
 
 <!-- ЗАКАЗ -->
@@ -121,10 +92,8 @@ h3 { margin-top:16px; }
     <option>Шагрень</option>
     <option>Антик</option>
   </select>
-
   <input id="color" placeholder="Цвет (RAL)">
-  <input id="quantity" placeholder="Количество кг" type="number" step="0.1">
-
+  <input id="quantity" placeholder="Количество, кг" type="number" step="0.1">
   <button onclick="send()">Получить выгодное предложение</button>
 
   <div class="banner">
@@ -144,51 +113,49 @@ function openTab(i){
   document.querySelectorAll(".tab-btn").forEach((b,n)=>b.classList.toggle("active",n===i));
 }
 
-function calc(){
-  const S = +area.value;
-  const loss = +loss.value/100;
+function calcTheory(){
+  const S=+area.value, loss=+loss.value/100;
+  const d1v=+d1.value, t1v=+t1.value, p1v=+tp1.value;
+  const d2v=+d2.value, t2v=+t2.value, p2v=+tp2.value;
 
-  const d1v=+d1.value, t1v=+t1.value, p1v=+p1.value;
-  const d2v=+d2.value, t2v=+t2.value, p2v=+p2.value;
+  if([S,d1v,t1v,p1v,d2v,t2v,p2v].some(isNaN)){ alert("Заполните теорию"); return; }
 
-  if([S,d1v,t1v,p1v,d2v,t2v,p2v].some(isNaN)){
-    alert("Заполните теорию");
-    return;
-  }
+  const q1=d1v*t1v/1000*S*(1+loss);
+  const q2=d2v*t2v/1000*S*(1+loss);
+  const c1=q1*p1v, c2=q2*p2v;
 
-  const q1t = d1v*t1v/1000*S*(1+loss);
-  const q2t = d2v*t2v/1000*S*(1+loss);
+  data.theory={q1,q2,c1,c2};
+  show();
+  openTab(2);
+}
 
-  const c1t = q1t*p1v;
-  const c2t = q2t*p2v;
+function calcPractice(){
+  const q1v=+q1.value, p1v=+pp1.value;
+  const q2v=+q2.value, p2v=+pp2.value;
 
-  data.theory={q1:q1t,q2:q2t,c1:c1t,c2:c2t};
+  if([q1v,p1v,q2v,p2v].some(isNaN)){ alert("Заполните практику"); return; }
 
-  let html = `
-<b>Теория</b><br>
-Краска 1: ${q1t.toFixed(3)} кг / ${c1t.toFixed(2)} ₽<br>
-Краска 2: ${q2t.toFixed(3)} кг / ${c2t.toFixed(2)} ₽<br>
-`;
+  const c1=q1v*p1v, c2=q2v*p2v;
+  data.practice={q1:q1v,q2:q2v,c1,c2};
+  show();
+  openTab(2);
+}
 
-  const q1p=+q1.value, q2p=+q2.value;
-  if(!isNaN(q1p)&&!isNaN(q2p)){
-    const c1p=q1p*p1v, c2p=q2p*p2v;
-    data.practice={q1:q1p,q2:q2p,c1:c1p,c2:c2p};
-    html+=`<br><b>Практика</b><br>
-Краска 1: ${c1p.toFixed(2)} ₽<br>
-Краска 2: ${c2p.toFixed(2)} ₽<br>`;
-  }
-
+function show(){
   const base=data.practice??data.theory;
+  if(!base){ result.innerHTML="Нет данных"; return; }
+
   const cheaper=base.c1<base.c2?"Краска 1":"Краска 2";
   const percent=(Math.abs(base.c1-base.c2)/Math.max(base.c1,base.c2)*100).toFixed(1);
 
   data.summary={cheaper,percent};
 
-  html+=`<br><b>Выгоднее:</b> ${cheaper}<br><b>Экономия:</b> ${percent}%`;
-
-  result.innerHTML=html;
-  openTab(2);
+  result.innerHTML=`
+<b>Теория:</b> ${data.theory?`${data.theory.c1.toFixed(2)} / ${data.theory.c2.toFixed(2)} ₽`:"—"}<br>
+<b>Практика:</b> ${data.practice?`${data.practice.c1.toFixed(2)} / ${data.practice.c2.toFixed(2)} ₽`:"—"}<br><br>
+<b>Выгоднее:</b> ${cheaper}<br>
+<b>Экономия:</b> ${percent}%
+`;
 }
 
 function send(){
