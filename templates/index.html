@@ -4,146 +4,207 @@
 <meta charset="UTF-8">
 <meta name="viewport"
  content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
 <title>Калькулятор порошковой краски</title>
 
 <style>
-body { font-family: system-ui; background:#f8fafc; margin:0; }
-.container { max-width:700px; margin:auto; padding:16px; }
-h2,h3 { margin-top:24px; }
-input,select,button {
-  width:100%; padding:10px; margin-top:8px; font-size:16px;
+body {
+  font-family: system-ui, -apple-system;
+  background:#f8fafc;
+  margin:0;
 }
-button { background:#2563eb; color:#fff; border:none; border-radius:6px; }
-.block { background:#e5e7eb; padding:12px; border-radius:6px; margin-top:12px; }
-.banner {
-  margin-top:24px; padding:12px; background:#f1f5f9; text-align:center;
+.container {
+  max-width:720px;
+  margin:auto;
+  padding:12px;
+}
+.tabs {
+  display:flex;
+  gap:6px;
+  margin-bottom:12px;
+}
+.tab-btn {
+  flex:1;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#e5e7eb;
   font-size:14px;
 }
+.tab-btn.active {
+  background:#2563eb;
+  color:white;
+}
+.tab {
+  display:none;
+}
+.tab.active {
+  display:block;
+}
+input, select, button {
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  font-size:16px;
+}
+button {
+  background:#2563eb;
+  color:white;
+  border:none;
+  border-radius:8px;
+}
+.block {
+  background:#e5e7eb;
+  padding:12px;
+  border-radius:8px;
+  margin-top:12px;
+}
+.banner {
+  margin-top:24px;
+  padding:12px;
+  background:#f1f5f9;
+  text-align:center;
+  font-size:14px;
+}
+h3 { margin-top:16px; }
 </style>
 </head>
 
 <body>
 <div class="container">
 
-<h2>🎓 Теоретический расчёт</h2>
+<!-- ВКЛАДКИ -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="openTab(0)">🎓 Теория</button>
+  <button class="tab-btn" onclick="openTab(1)">🔧 Практика</button>
+  <button class="tab-btn" onclick="openTab(2)">📊 Результат</button>
+  <button class="tab-btn" onclick="openTab(3)">🛒 Предложение</button>
+</div>
 
-<label>Площадь, м²</label>
-<input id="area" type="number" step="0.001">
+<!-- ТЕОРИЯ -->
+<div class="tab active">
+  <h3>Площадь</h3>
+  <input id="area" type="number" step="0.001" placeholder="м²">
+  <input id="loss" type="number" value="15" placeholder="Потери %">
 
-<label>Потери, %</label>
-<input id="loss" type="number" value="15">
+  <h3>Краска 1</h3>
+  <input id="d1" placeholder="Плотность г/см³" type="number" step="0.001">
+  <input id="t1" placeholder="Толщина мкм" type="number">
+  <input id="p1" placeholder="Цена ₽/кг" type="number" step="0.01">
 
-<h3>Краска 1</h3>
-<input id="d1" placeholder="Плотность, г/см³" type="number" step="0.001">
-<input id="t1" placeholder="Толщина, мкм" type="number">
-<input id="p1" placeholder="Цена, ₽/кг" type="number" step="0.01">
+  <h3>Краска 2</h3>
+  <input id="d2" placeholder="Плотность г/см³" type="number" step="0.001">
+  <input id="t2" placeholder="Толщина мкм" type="number">
+  <input id="p2" placeholder="Цена ₽/кг" type="number" step="0.01">
 
-<h3>Краска 2</h3>
-<input id="d2" placeholder="Плотность, г/см³" type="number" step="0.001">
-<input id="t2" placeholder="Толщина, мкм" type="number">
-<input id="p2" placeholder="Цена, ₽/кг" type="number" step="0.01">
+  <button onclick="calc()">Рассчитать</button>
+</div>
 
-<button onclick="calc()">Рассчитать</button>
+<!-- ПРАКТИКА -->
+<div class="tab">
+  <h3>Фактический расход</h3>
+  <input id="q1" placeholder="Краска 1, кг" type="number" step="0.001">
+  <input id="q2" placeholder="Краска 2, кг" type="number" step="0.001">
+</div>
 
-<div id="theory" class="block"></div>
+<!-- РЕЗУЛЬТАТ -->
+<div class="tab">
+  <div id="result" class="block">Рассчитайте данные</div>
+</div>
 
-<h2>🔧 Практический расход</h2>
+<!-- ЗАКАЗ -->
+<div class="tab">
+  <select id="surface">
+    <option>Матовая</option>
+    <option>Глянцевая</option>
+    <option>Муар</option>
+    <option>Шагрень</option>
+    <option>Антик</option>
+  </select>
 
-<input id="q1" placeholder="Факт. расход краски 1, кг" type="number" step="0.001">
-<input id="q2" placeholder="Факт. расход краски 2, кг" type="number" step="0.001">
+  <input id="color" placeholder="Цвет (RAL)">
+  <input id="quantity" placeholder="Количество кг" type="number" step="0.1">
 
-<div id="practice" class="block"></div>
+  <button onclick="send()">Получить выгодное предложение</button>
 
-<h2>🛒 Получить выгодное предложение</h2>
-
-<select id="surface">
-  <option>Матовая</option>
-  <option>Глянцевая</option>
-  <option>Муар</option>
-  <option>Шагрень</option>
-  <option>Антик</option>
-</select>
-
-<input id="color" placeholder="Цвет">
-<input id="quantity" placeholder="Количество, кг" type="number" step="0.1">
-
-<button onclick="send()">Получить выгодное предложение</button>
-
-<div class="banner">
-Тут может быть ваша реклама<br>
-Обращайтесь: <b>@A_n1ck</b>
+  <div class="banner">
+    Тут может быть ваша реклама<br>
+    Обращайтесь: <b>@A_n1ck</b>
+  </div>
 </div>
 
 </div>
 
 <script>
-const tg = window.Telegram.WebApp;
-let result = {};
+const tg = window.Telegram?.WebApp;
+let data = {};
 
-function calc() {
+function openTab(i){
+  document.querySelectorAll(".tab").forEach((t,n)=>t.classList.toggle("active",n===i));
+  document.querySelectorAll(".tab-btn").forEach((b,n)=>b.classList.toggle("active",n===i));
+}
+
+function calc(){
   const S = +area.value;
-  const loss = +loss.value / 100;
+  const loss = +loss.value/100;
 
-  const d1v = +d1.value, t1v = +t1.value, p1v = +p1.value;
-  const d2v = +d2.value, t2v = +t2.value, p2v = +p2.value;
+  const d1v=+d1.value, t1v=+t1.value, p1v=+p1.value;
+  const d2v=+d2.value, t2v=+t2.value, p2v=+p2.value;
 
-  if ([S,d1v,t1v,p1v,d2v,t2v,p2v].some(isNaN)) {
-    alert("Заполните все поля теории");
+  if([S,d1v,t1v,p1v,d2v,t2v,p2v].some(isNaN)){
+    alert("Заполните теорию");
     return;
   }
 
-  // q = rho * h / 1000
-  const q1t = d1v * t1v / 1000 * S * (1 + loss);
-  const q2t = d2v * t2v / 1000 * S * (1 + loss);
+  const q1t = d1v*t1v/1000*S*(1+loss);
+  const q2t = d2v*t2v/1000*S*(1+loss);
 
-  const c1t = q1t * p1v;
-  const c2t = q2t * p2v;
+  const c1t = q1t*p1v;
+  const c2t = q2t*p2v;
 
-  theory.innerHTML = `
-<b>Теория:</b><br>
+  data.theory={q1:q1t,q2:q2t,c1:c1t,c2:c2t};
+
+  let html = `
+<b>Теория</b><br>
 Краска 1: ${q1t.toFixed(3)} кг / ${c1t.toFixed(2)} ₽<br>
-Краска 2: ${q2t.toFixed(3)} кг / ${c2t.toFixed(2)} ₽
+Краска 2: ${q2t.toFixed(3)} кг / ${c2t.toFixed(2)} ₽<br>
 `;
 
-  result.theory = { q1:q1t, q2:q2t, c1:c1t, c2:c2t };
-
-  const q1p = +q1.value, q2p = +q2.value;
-  if (!isNaN(q1p) && !isNaN(q2p)) {
-    const c1p = q1p * p1v;
-    const c2p = q2p * p2v;
-
-    practice.innerHTML = `
-<b>Практика:</b><br>
+  const q1p=+q1.value, q2p=+q2.value;
+  if(!isNaN(q1p)&&!isNaN(q2p)){
+    const c1p=q1p*p1v, c2p=q2p*p2v;
+    data.practice={q1:q1p,q2:q2p,c1:c1p,c2:c2p};
+    html+=`<br><b>Практика</b><br>
 Краска 1: ${c1p.toFixed(2)} ₽<br>
-Краска 2: ${c2p.toFixed(2)} ₽
-`;
-
-    result.practice = { q1:q1p, q2:q2p, c1:c1p, c2:c2p };
+Краска 2: ${c2p.toFixed(2)} ₽<br>`;
   }
 
-  const base = result.practice ?? result.theory;
-  const cheaper = base.c1 < base.c2 ? "Краска 1" : "Краска 2";
-  const percent = (Math.abs(base.c1-base.c2)/Math.max(base.c1,base.c2)*100).toFixed(1);
+  const base=data.practice??data.theory;
+  const cheaper=base.c1<base.c2?"Краска 1":"Краска 2";
+  const percent=(Math.abs(base.c1-base.c2)/Math.max(base.c1,base.c2)*100).toFixed(1);
 
-  practice.innerHTML += `<br><b>Выгоднее:</b> ${cheaper}<br><b>Экономия:</b> ${percent}%`;
+  data.summary={cheaper,percent};
 
-  result.summary = { cheaper, percent };
+  html+=`<br><b>Выгоднее:</b> ${cheaper}<br><b>Экономия:</b> ${percent}%`;
+
+  result.innerHTML=html;
+  openTab(2);
 }
 
-function send() {
+function send(){
   fetch("/api/order",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      telegram: tg.initDataUnsafe.user,
-      result,
+    body:JSON.stringify({
+      telegram:tg?.initDataUnsafe?.user,
+      calc:data,
       order:{
         surface:surface.value,
         color:color.value,
         quantity:quantity.value
       }
     })
-  }).then(()=>alert("Отправлено админу"));
+  }).then(()=>alert("Заявка отправлена админу"));
 }
 </script>
 
